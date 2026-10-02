@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1F5E4B;
+  --color-primary-dark: #174638;
+  --color-primary-light: #E8F2EE;
+  --color-primary-subtle: #F0F7F4;
+  --color-accent: #D6A84F;
+  --color-accent-dark: #B88E3B;
+  --color-accent-light: #FAF4E8;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F2F5F3;
+  --color-background: #F7F8F6;
+  --color-border: #E2E7E3;
+  --color-border-subtle: #EDF1EE;
+  --color-text-main: #17211D;
+  --color-text-muted: #6B756F;
+  --color-text-light: #8E9993;
+
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+@layer base {
+  :root {
+    --primary: #1F5E4B;
+    --primary-dark: #174638;
+    --primary-light: #E8F2EE;
+    --accent: #D6A84F;
+    --bg-page: #F7F8F6;
+    --surface: #FFFFFF;
+    --text-primary: #17211D;
+    --text-secondary: #6B756F;
+    --border-main: #E2E7E3;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #F7F8F6;
+    color: #17211D;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sans);
+    color: #17211D;
+    letter-spacing: -0.015em;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D8DFDB;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #BAC5C0;
+}
+
+/* Smooth transitions for interactive elements */
+button, a, input, select, textarea {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Focus visible styles for accessibility */
+:focus-visible {
+  outline: 2px solid #1F5E4B;
+  outline-offset: 2px;
+}

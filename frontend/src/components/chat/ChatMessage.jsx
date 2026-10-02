@@ -1,0 +1,195 @@
+import React, { useState } from 'react';
+import {
+  Sparkles,
+  User,
+  Copy,
+  Check,
+  RotateCw,
+  ThumbsUp,
+  ThumbsDown,
+  BookOpen,
+} from 'lucide-react';
+import { CitationCard } from './CitationCard';
+import { useToast } from '../../context/ToastContext';
+
+export const ChatMessage = ({
+  message,
+  onRegenerate,
+}) => {
+  const isAI = message.sender === 'ai';
+  const [copied, setCopied] = useState(false);
+  const [liked, setLiked] = useState(null);
+  const toast = useToast();
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message.text);
+    setCopied(true);
+    toast.success('Message copied to clipboard');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Simple clean markdown formatter for academic responses
+  const renderFormattedText = (content) => {
+    const lines = content.split('\n');
+    return lines.map((line, idx) => {
+      // Header level 3
+      if (line.startsWith('### ')) {
+        return (
+          <h4 key={idx} className="text-sm sm:text-base font-bold text-[#17211D] mt-3 mb-1.5 flex items-center gap-1.5">
+            {line.replace('### ', '')}
+          </h4>
+        );
+      }
+      // Bullet point
+      if (line.startsWith('* ') || line.startsWith('• ') || line.startsWith('- ')) {
+        const itemText = line.replace(/^[\*\•\-]\s*/, '');
+        return (
+          <li key={idx} className="ml-4 list-disc text-xs sm:text-sm text-[#17211D] leading-relaxed my-1">
+            {renderBoldAndCode(itemText)}
+          </li>
+        );
+      }
+      // Numbered list
+      if (/^\d+\.\s/.test(line)) {
+        const itemText = line.replace(/^\d+\.\s*/, '');
+        return (
+          <li key={idx} className="ml-4 list-decimal text-xs sm:text-sm text-[#17211D] leading-relaxed my-1">
+            {renderBoldAndCode(itemText)}
+          </li>
+        );
+      }
+      // Empty line
+      if (!line.trim()) {
+        return <div key={idx} className="h-2" />;
+      }
+      // Standard paragraph
+      return (
+        <p key={idx} className="text-xs sm:text-sm text-[#17211D] leading-relaxed my-1">
+          {renderBoldAndCode(line)}
+        </p>
+      );
+    });
+  };
+
+  const renderBoldAndCode = (text) => {
+    // Replace **bold** and `code`
+    const parts = text.split(/(\*\*.*?\*\*|\`.*?\`)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} className="font-bold text-[#17211D]">{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith('`') && part.endsWith('`')) {
+        return (
+          <code key={i} className="font-mono text-xs px-1.5 py-0.5 rounded bg-[#F2F5F3] text-[#1F5E4B] border border-[#E2E7E3]">
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      return part;
+    });
+  };
+
+  return (
+    <div className={`flex gap-3 sm:gap-4 py-4 px-3 sm:px-5 rounded-2xl transition-colors ${isAI ? 'bg-white border border-[#E2E7E3] shadow-2xs' : 'bg-transparent'}`}>
+      {/* Avatar */}
+      <div className="shrink-0">
+        {isAI ? (
+          <div className="w-8 h-8 rounded-xl bg-[#1F5E4B] text-white flex items-center justify-center shadow-2xs">
+            <Sparkles className="w-4 h-4" />
+          </div>
+        ) : (
+          <div className="w-8 h-8 rounded-xl bg-[#E8F2EE] text-[#1F5E4B] border border-[#D8E9E2] flex items-center justify-center font-bold text-xs">
+            <User className="w-4 h-4" />
+          </div>
+        )}
+      </div>
+
+      {/* Message Body */}
+      <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-[#17211D]">
+              {isAI ? 'StudyLM AI' : 'You'}
+            </span>
+            {isAI && (
+              <span className="text-[10px] font-semibold px-2 py-0.2 rounded-full bg-[#E8F2EE] text-[#1F5E4B] border border-[#D8E9E2]">
+                Grounded in Sources
+              </span>
+            )}
+          </div>
+          <span className="text-[11px] text-[#8E9993] font-medium">{message.timestamp || 'Just now'}</span>
+        </div>
+
+        {/* Formatted Content */}
+        <div className="text-xs sm:text-sm text-[#17211D] space-y-1">
+          {renderFormattedText(message.text)}
+        </div>
+
+        {/* Citations Section */}
+        {isAI && message.citations && message.citations.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-[#EDF1EE]">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#1F5E4B] mb-1.5">
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Grounded Citations ({message.citations.length})</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1">
+              {message.citations.map((cit, idx) => (
+                <CitationCard key={cit.id || idx} citation={cit} index={idx + 1} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Action Toolbar for AI responses */}
+        {isAI && (
+          <div className="flex items-center justify-between pt-2 text-[#8E9993]">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="p-1.5 rounded-lg hover:text-[#17211D] hover:bg-[#F2F5F3] transition-colors cursor-pointer flex items-center gap-1 text-xs"
+                title="Copy response"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onRegenerate}
+                className="p-1.5 rounded-lg hover:text-[#17211D] hover:bg-[#F2F5F3] transition-colors cursor-pointer flex items-center gap-1 text-xs"
+                title="Regenerate answer"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Regenerate</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setLiked(liked === 'up' ? null : 'up')}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  liked === 'up' ? 'text-[#1F5E4B] bg-[#E8F2EE]' : 'hover:text-[#17211D] hover:bg-[#F2F5F3]'
+                }`}
+                title="Helpful response"
+              >
+                <ThumbsUp className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setLiked(liked === 'down' ? null : 'down')}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  liked === 'down' ? 'text-rose-600 bg-rose-50' : 'hover:text-[#17211D] hover:bg-[#F2F5F3]'
+                }`}
+                title="Not helpful"
+              >
+                <ThumbsDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
