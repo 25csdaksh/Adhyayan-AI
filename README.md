@@ -4,7 +4,7 @@
 
 ---
 
-## 📌 Status: Phase 06 Completed (Document Processing Pipeline)
+## 📌 Status: Phase 07 Completed (Embeddings & MongoDB Atlas Vector Search)
 
 - **Phase 01:** Foundation, Monorepo, Express Backend, MongoDB, CORS, `/api/health` *(Verified)*
 - **Phase 02:** Light-First Academic UI/UX, Design System, Landing Page, Dashboard, 3-Panel Workspace, Chat UI, Source Management, Settings, Profile *(Verified)*
@@ -12,7 +12,117 @@
 - **Phase 04:** Authenticated Notebooks CRUD, Strict User Isolation, Search & Pagination *(Verified)*
 - **Phase 05:** Document & Multi-Format Source Management (PDF, DOCX, TXT, Web URL, Plain Text), Cloudinary Storage *(Verified)*
 - **Phase 06:** Document Processing Pipeline, Text Extraction, Cleaning & Deterministic Chunking *(Verified)*
-- **Phase 07:** Vector Search & Multi-Format Document Grounding *(Upcoming)*
+- **Phase 07:** Google Gemini Embeddings (`text-embedding-004`), MongoDB Atlas Vector Search & Semantic Retrieval *(Verified)*
+- **Phase 08:** Grounded RAG Chat, AI Answers & Citations Synthesis *(Upcoming)*
+
+---
+
+## 🧠 Embeddings & Vector Search (Phase 07)
+
+### Embedding Architecture (`backend/src/services/embedding/`)
+- **Model:** Google Gemini `text-embedding-004` (768 numeric dimensions).
+- **Service (`embeddingService.js`):**
+  - Single embedding generation via `generateEmbedding(text)`.
+  - Bounded batch generation via `generateEmbeddings(texts, batchSize = 16)` using `batchEmbedContents`.
+  - Exponential backoff retry handler for transient rate limits (`429` / `503` / `RESOURCE_EXHAUSTED`).
+  - Strict vector validation: verifies array structure, numeric completeness, and exact 768-dimension shape.
+  - Safe API error masking without exposing sensitive keys or complete raw document contents.
+  - Deterministic normalized pseudo-embedding fallback for offline or headless testing environments without active Gemini credentials.
+
+### Chunk Model Extension (`backend/src/models/Chunk.js`)
+- `embedding`: `[Number]` — 768-dimensional float vector, configured with `select: false` to prevent leaking raw numeric arrays in basic API queries.
+- `embeddingModel`: String (`'text-embedding-004'`).
+- `embeddingDimensions`: Number (`768`).
+- `embeddedAt`: Date timestamp.
+
+### Document Processing Lifecycle Integration
+```text
+Document (pending)
+   ↓
+Processing (extract + clean)
+   ↓
+Deterministic Chunks Generated
+   ↓
+Gemini Embeddings Generated
+   ↓
+Chunks + Embeddings Saved Atomically (Idempotent)
+   ↓
+Document Ready (embeddingStatus: 'completed')
+```
+
+### MongoDB Atlas Vector Search Index Configuration
+
+To enable vector search on your MongoDB Atlas cluster:
+1. Navigate to **MongoDB Atlas > Database > Browse Collections**.
+2. Select database `studylm` and collection `chunks`.
+3. Go to the **Search Indexes** tab and click **Create Search Index** (select **JSON Editor**).
+4. Name the index `vector_index` and paste the following configuration:
+
+```json
+{
+  "fields": [
+    {
+      "type": "vector",
+      "path": "embedding",
+      "numDimensions": 768,
+      "similarity": "cosine"
+    },
+    {
+      "type": "filter",
+      "path": "notebookId"
+    }
+  ]
+}
+```
+
+> **Local MongoDB Fallback:** When running locally without Atlas Search, `vectorSearchService.js` transparently executes an in-memory cosine similarity search strictly scoped to the requested `notebookId`.
+
+### Semantic Search API Endpoint
+
+**Endpoint:** `POST /api/notebooks/:notebookId/search`  
+**Protection:** Private (JWT Bearer Token & Notebook Ownership Required)
+
+**Request Body:**
+```json
+{
+  "query": "What are the principles of quantum superposition and qubits?",
+  "topK": 5,
+  "scoreThreshold": 0.5
+}
+```
+
+**Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "message": "Semantic search completed successfully",
+  "data": {
+    "query": "What are the principles of quantum superposition and qubits?",
+    "results": [
+      {
+        "chunkId": "66f4a8b1c9e8d7a123456789",
+        "documentId": "66f4a8b1c9e8d7a123456780",
+        "notebookId": "66f4a8b1c9e8d7a123456770",
+        "chunkIndex": 0,
+        "text": "Quantum computing harnesses the laws of quantum mechanics...",
+        "pageNumber": 1,
+        "pageStart": 1,
+        "pageEnd": 1,
+        "score": 0.8924,
+        "documentTitle": "Quantum Computing Principles.pdf",
+        "sourceType": "pdf"
+      }
+    ]
+  },
+  "timestamp": "2026-10-02T05:50:00.000Z"
+}
+```
+
+### Document Re-embedding Endpoint
+
+**Endpoint:** `POST /api/notebooks/:notebookId/documents/:documentId/embed`  
+**Protection:** Private (JWT Bearer Token & Notebook Ownership Required)  
+- Atomically regenerates and replaces chunk embeddings idempotently.
 
 ---
 

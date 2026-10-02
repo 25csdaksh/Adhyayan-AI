@@ -328,6 +328,7 @@ const getDocumentChunks = asyncHandler(async (req, res) => {
 
   const [chunks, total] = await Promise.all([
     Chunk.find({ documentId, notebookId: notebook._id })
+      .select('-embedding')
       .sort({ chunkIndex: 1 })
       .skip(skip)
       .limit(limit)

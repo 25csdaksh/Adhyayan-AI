@@ -18,6 +18,16 @@ const config = {
     apiSecret: process.env.CLOUDINARY_API_SECRET || '',
   },
   maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || '20', 10),
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || '',
+    embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
+    dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '768', 10),
+  },
+  search: {
+    defaultTopK: parseInt(process.env.DEFAULT_VECTOR_TOP_K || '5', 10),
+    maxTopK: parseInt(process.env.MAX_VECTOR_TOP_K || '20', 10),
+    defaultScoreThreshold: parseFloat(process.env.DEFAULT_VECTOR_SCORE_THRESHOLD || '0.5'),
+  },
   processing: {
     maxTextChars: parseInt(process.env.MAX_TEXT_CHARS || '2000000', 10),
     maxChunksPerDocument: parseInt(process.env.MAX_CHUNKS_PER_DOCUMENT || '1000', 10),

@@ -106,4 +106,22 @@ export const documentService = {
   async deleteDocument(notebookId, documentId) {
     return apiClient.delete(`/notebooks/${notebookId}/documents/${documentId}`);
   },
+
+  /**
+   * Trigger re-embedding for a document
+   * @param {string} notebookId
+   * @param {string} documentId
+   */
+  async reembedDocument(notebookId, documentId) {
+    return apiClient.post(`/notebooks/${notebookId}/documents/${documentId}/embed`);
+  },
+
+  /**
+   * Perform semantic vector search over a notebook's documents
+   * @param {string} notebookId
+   * @param {{ query: string, topK?: number, scoreThreshold?: number }} searchParams
+   */
+  async searchNotebook(notebookId, searchParams) {
+    return apiClient.post(`/notebooks/${notebookId}/search`, searchParams);
+  },
 };

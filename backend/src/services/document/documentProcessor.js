@@ -105,6 +105,23 @@ async function processDocument(documentId, options = {}) {
     const maxChunks = config.processing?.maxChunksPerDocument || 1000;
     const finalChunks = rawChunks.slice(0, maxChunks);
 
+    // Generate Embeddings for all chunks (Phase 07)
+    const { generateEmbeddings, EMBEDDING_MODEL, EXPECTED_DIMENSIONS } = require('../embedding/embeddingService');
+    const chunkTexts = finalChunks.map((c) => c.text);
+    const vectors = await generateEmbeddings(chunkTexts);
+
+    if (!vectors || vectors.length !== finalChunks.length) {
+      throw new Error('Failed to generate embeddings for document chunks');
+    }
+
+    const embeddedAt = new Date();
+    for (let i = 0; i < finalChunks.length; i++) {
+      finalChunks[i].embedding = vectors[i];
+      finalChunks[i].embeddingModel = EMBEDDING_MODEL;
+      finalChunks[i].embeddingDimensions = EXPECTED_DIMENSIONS;
+      finalChunks[i].embeddedAt = embeddedAt;
+    }
+
     // Atomically replace chunks in MongoDB (Idempotency)
     await Chunk.deleteMany({ documentId: document._id });
     await Chunk.insertMany(finalChunks);
@@ -120,6 +137,9 @@ async function processDocument(documentId, options = {}) {
       wordCount,
       pageCount: pageCount || (pages ? pages.length : null),
       chunkCount: finalChunks.length,
+      embeddingStatus: 'completed',
+      embeddingModel: EMBEDDING_MODEL,
+      embeddingDimensions: EXPECTED_DIMENSIONS,
       extractedAt: new Date(),
     };
 
@@ -129,10 +149,14 @@ async function processDocument(documentId, options = {}) {
     const safeErrorMessage =
       processingErr.message && !processingErr.message.includes('at ')
         ? processingErr.message
-        : 'An error occurred while extracting content from this document.';
+        : 'An error occurred while extracting content or generating embeddings for this document.';
 
     document.status = 'failed';
     document.processingError = safeErrorMessage;
+    document.metadata = {
+      ...(document.metadata || {}),
+      embeddingStatus: 'failed',
+    };
     await document.save();
     throw processingErr;
   }

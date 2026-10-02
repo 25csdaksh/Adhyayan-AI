@@ -40,6 +40,24 @@ const chunkSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    embedding: {
+      type: [Number],
+      default: undefined,
+      select: false,
+    },
+    embeddingModel: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    embeddingDimensions: {
+      type: Number,
+      default: 0,
+    },
+    embeddedAt: {
+      type: Date,
+      default: null,
+    },
     metadata: {
       type: mongoose.Schema.Types.Mixed,
       default: {},
@@ -50,7 +68,7 @@ const chunkSchema = new mongoose.Schema(
   }
 );
 
-// Unique compound index to ensure deterministic ordering without duplicate chunk slots
+// Indexes for high performance querying and vector constraints
 chunkSchema.index({ documentId: 1, chunkIndex: 1 }, { unique: true });
 chunkSchema.index({ notebookId: 1 });
 

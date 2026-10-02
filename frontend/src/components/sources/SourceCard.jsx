@@ -75,6 +75,14 @@ export const SourceCard = ({
           </Badge>
         );
       case 'processing':
+        if (source.metadata?.embeddingStatus === 'in_progress') {
+          return (
+            <Badge variant="purple" size="sm" dot>
+              <Loader2 className="w-3 h-3 animate-spin inline-block -mt-0.5 mr-1" />
+              Embedding
+            </Badge>
+          );
+        }
         return (
           <Badge variant="amber" size="sm" dot>
             <Loader2 className="w-3 h-3 animate-spin inline-block -mt-0.5 mr-1" />

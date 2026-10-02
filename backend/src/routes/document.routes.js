@@ -30,6 +30,7 @@ router
 
 router.get('/:documentId/status', getDocumentStatus);
 router.post('/:documentId/process', reprocessDocument);
+router.post('/:documentId/embed', reprocessDocument);
 router.get('/:documentId/chunks', getDocumentChunks);
 
 module.exports = router;
