@@ -12,19 +12,27 @@ const app = express();
 // Security HTTP headers
 app.use(helmet());
 
-// CORS Configuration
+// CORS Configuration supporting localhost dev ports dynamically
 const allowedOrigins = [
   config.clientUrl,
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
   'http://localhost:3000',
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, postman)
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow requests with no origin (e.g. mobile apps, curl, postman, server-to-server)
+      if (!origin) {
+        return callback(null, true);
+      }
+      if (
+        allowedOrigins.includes(origin) ||
+        (!config.isProduction && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin))
+      ) {
         return callback(null, true);
       }
       return callback(new Error(`CORS policy blocked access from origin: ${origin}`));
@@ -49,9 +57,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Root welcome endpoint
 app.get('/', (req, res) => {
   res.status(200).json({
-    message: 'Welcome to StudyLM API Backend (Phase 01: Foundation)',
+    message: 'Welcome to StudyLM API Backend (Phase 03: Authentication Active)',
     healthEndpoint: '/api/health',
-    documentation: 'https://github.com/your-org/studylm',
+    authEndpoints: '/api/auth',
+    documentation: 'https://github.com/25csdaksh/Adhyayan-AI',
   });
 });
 

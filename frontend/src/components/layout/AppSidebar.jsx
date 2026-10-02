@@ -5,24 +5,23 @@ import {
   BookOpen,
   Clock,
   Settings,
-  HelpCircle,
   User,
   Plus,
   Activity,
   X,
-  Sparkles,
-  Shield,
-  FolderLock,
+  ShieldCheck,
 } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
-import { MOCK_USER, MOCK_NOTEBOOKS } from '../../mock/mockData';
+import { MOCK_NOTEBOOKS } from '../../mock/mockData';
+import { useAuth } from '../../context/AuthContext';
 
 export const AppSidebar = ({
   mobileOpen = false,
   onCloseMobile,
   onOpenCreateNotebook,
 }) => {
+  const { user } = useAuth();
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'My Notebooks', path: '/dashboard?tab=all', icon: BookOpen },
@@ -30,6 +29,8 @@ export const AppSidebar = ({
   ];
 
   const recentNotebooks = MOCK_NOTEBOOKS.slice(0, 4);
+  const displayName = user?.name || 'Researcher';
+  const displayEmail = user?.email || '';
 
   const sidebarContent = (
     <div className="h-full flex flex-col justify-between p-4 bg-white border-r border-[#E2E7E3] w-64">
@@ -138,12 +139,12 @@ export const AppSidebar = ({
           onClick={onCloseMobile}
           className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#F2F5F3] transition-colors group"
         >
-          <Avatar src={MOCK_USER.avatar} name={MOCK_USER.name} size="sm" status="online" />
+          <Avatar src={user?.avatar} name={displayName} size="sm" status="online" />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold text-[#17211D] group-hover:text-[#1F5E4B] transition-colors truncate">
-              {MOCK_USER.fullName}
+              {displayName}
             </p>
-            <p className="text-[11px] text-[#8E9993] truncate">{MOCK_USER.role}</p>
+            <p className="text-[11px] text-[#8E9993] truncate">{displayEmail}</p>
           </div>
         </Link>
       </div>

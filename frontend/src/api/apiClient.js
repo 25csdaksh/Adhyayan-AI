@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { tokenStorage } from '../utils/tokenStorage';
 
 // Get API base URL from Vite environment variables or fallback to relative '/api' for proxy
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -12,11 +13,11 @@ const apiClient = axios.create({
   },
 });
 
-// Request Interceptor: Attach authentication token or headers (prepared for future phases)
+// Request Interceptor: Attach bearer token through centralized tokenStorage
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('studylm_auth_token');
-    if (token) {
+    const token = tokenStorage.getToken();
+    if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -26,18 +27,27 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response Interceptor: Standardize error formatting
+// Response Interceptor: Standardize error formatting and handle 401 unauthorized
 apiClient.interceptors.response.use(
   (response) => {
     return response.data;
   },
   (error) => {
+    const status = error.response?.status;
+    const requestUrl = error.config?.url || '';
+
+    // If 401 on authenticated endpoints (not login/register), clear token
+    if (status === 401 && !requestUrl.includes('/auth/login') && !requestUrl.includes('/auth/register')) {
+      tokenStorage.removeToken();
+    }
+
     const normalizedError = {
       message: error.response?.data?.message || error.message || 'Network error occurred',
-      statusCode: error.response?.status || 500,
+      statusCode: status || 500,
       errors: error.response?.data?.errors || [],
       isNetworkError: !error.response,
     };
+
     return Promise.reject(normalizedError);
   }
 );

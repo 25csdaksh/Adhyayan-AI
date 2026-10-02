@@ -4,19 +4,39 @@
 
 ---
 
-## 📌 Status: Phase 02 Completed (UI/UX & Design System)
+## 📌 Status: Phase 03 Completed (Authentication & User System)
 
 - **Phase 01:** Foundation, Monorepo, Express Backend, MongoDB, CORS, `/api/health` *(Verified)*
 - **Phase 02:** Light-First Academic UI/UX, Design System, Landing Page, Dashboard, 3-Panel Workspace, Chat UI, Source Management, Settings, Profile *(Verified)*
-- **Phase 03:** Authentication & Security *(Upcoming)*
-- **Phase 04:** Document Ingestion & Storage *(Upcoming)*
+- **Phase 03:** Secure JWT & Bcrypt Authentication, User Registration, Login, Protected Routes, Session Management & Profile Update *(Verified)*
+- **Phase 04:** Notebooks CRUD & Multi-Format Document Ingestion *(Upcoming)*
 - **Phase 05:** Vector Search & Gemini RAG *(Upcoming)*
 
 ---
 
-## 🎨 Design System & Palette (60:30:10 Rule)
+## 🔐 Authentication & Security (Phase 03)
 
-StudyLM utilizes a light-first, academic + AI research design system:
+### Security Features
+- **Password Hashing:** 12-round bcrypt salt, plaintext passwords never logged or persisted.
+- **Model Security:** `passwordHash` field explicitly excluded (`select: false`) across Mongoose queries.
+- **Stateless Tokens:** Minimal JWT payload (`{ userId, role }`) signed with `JWT_SECRET` and configurable expiration (`JWT_EXPIRES_IN=7d`).
+- **Input Sanitization:** Email normalization (lowercase, trim), regex validation, and duplicate conflict checks.
+- **Centralized Interceptor:** Axios request interceptor attaches Bearer tokens via `tokenStorage`; response interceptor captures 401 unauthorized errors to clear sessions without redirect loops.
+- **Protected Routing:** `ProtectedRoute` guards private workspace routes with loading skeletons and redirect-path preservation (`/login?redirect=...`).
+
+### Auth API Endpoints
+
+| Method | Endpoint | Protection | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/register` | Public | Register new user, hash password, return `{ user, token }` (201) |
+| `POST` | `/api/auth/login` | Public | Authenticate user, update `lastLoginAt`, return `{ user, token }` (200) |
+| `GET` | `/api/auth/me` | Bearer Token | Return currently authenticated user profile (200) |
+| `PATCH`| `/api/auth/profile` | Bearer Token | Update user display name and avatar (200) |
+| `POST` | `/api/auth/logout` | Public/Bearer| Acknowledge stateless session termination (200) |
+
+---
+
+## 🎨 Design System & Palette (60:30:10 Rule)
 
 | Role | Color | Hex Code | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -36,8 +56,8 @@ StudyLM utilizes a light-first, academic + AI research design system:
 ### Frontend
 - **Framework:** React 19 + Vite
 - **Routing:** React Router v7
+- **Authentication Context:** React Context + `tokenStorage` + Axios interceptors
 - **Styling:** Tailwind CSS v4 (Custom academic design tokens)
-- **HTTP Client:** Axios (configured with interceptors & normalized error handling)
 - **Icons:** Lucide React
 - **Typography:** Plus Jakarta Sans & Inter
 
@@ -45,6 +65,7 @@ StudyLM utilizes a light-first, academic + AI research design system:
 - **Runtime:** Node.js (v18+)
 - **Framework:** Express.js
 - **Database:** MongoDB Atlas (via Mongoose ODM)
+- **Authentication:** JWT (`jsonwebtoken`) + Password Hashing (`bcryptjs`)
 - **Security & Utilities:** Helmet, CORS, Morgan, Dotenv
 
 ---
@@ -61,23 +82,29 @@ studylm/
 │   ├── .env                            # Local environment variables (gitignored)
 │   ├── .env.example                    # Template environment configuration
 │   ├── .gitignore                      # Backend specific ignores
-│   ├── package.json                    # Backend dependencies and scripts
+│   ├── package.json                    # Backend dependencies (Express, Mongoose, JWT, bcryptjs)
 │   └── src/
 │       ├── config/
 │       │   ├── db.js                   # Resilient MongoDB Mongoose connection handler
 │       │   └── env.js                  # Environment variable loader & validator
 │       ├── controllers/
+│       │   ├── auth.controller.js      # Register, Login, Me, Profile update, Logout
 │       │   └── health.controller.js    # GET /api/health controller with system metrics
 │       ├── middlewares/
+│       │   ├── auth.js                 # JWT Bearer token verification middleware
 │       │   ├── errorHandler.js         # Centralized global error handling middleware
 │       │   └── notFound.js             # 404 unmatched route handler
+│       ├── models/
+│       │   └── User.js                 # Mongoose User model with bcrypt hashing & safe serialization
 │       ├── routes/
-│       │   ├── health.routes.js        # Route definitions for /api/health
-│       │   └── index.js                # Main router mounting all domain routes
+│       │   ├── auth.routes.js          # Authentication & profile routes (/api/auth)
+│       │   ├── health.routes.js        # Health check router (/api/health)
+│       │   └── index.js                # Central API router mounting all domain routes
 │       ├── utils/
 │       │   ├── apiError.js             # Custom ApiError class with status codes
 │       │   ├── apiResponse.js          # Standardized JSON response envelope
-│       │   └── asyncHandler.js         # Controller async wrapper helper
+│       │   ├── asyncHandler.js         # Controller async wrapper helper
+│       │   └── jwt.js                  # JWT token signing & verification utility
 │       ├── app.js                      # Express app initialization (CORS, Helmet, parsers)
 │       └── server.js                   # Server entry point with graceful shutdown
 │
@@ -90,9 +117,13 @@ studylm/
     ├── vite.config.js                  # Vite configuration with Tailwind & API proxy
     └── src/
         ├── api/
-        │   ├── apiClient.js            # Configured Axios instance with interceptors
+        │   ├── apiClient.js            # Configured Axios instance with token interceptors
+        │   ├── authService.js          # Auth API service (register, login, getMe, updateProfile)
         │   └── healthService.js        # Health check API service call
         ├── components/
+        │   ├── auth/
+        │   │   ├── ProtectedRoute.jsx  # Route guard with session loader & redirect
+        │   │   └── PublicOnlyRoute.jsx # Guest guard preventing authenticated visits to login/register
         │   ├── chat/
         │   │   ├── ChatInput.jsx       # Chat input with prompt chips & source attachment
         │   │   ├── ChatMessage.jsx     # Markdown formatting, citations & actions
@@ -102,11 +133,11 @@ studylm/
         │   │   └── StatusBadge.jsx     # Status badge with live ping indicators
         │   ├── layout/
         │   │   ├── AppLayout.jsx       # Workspace shell with sidebar & mobile drawer
-        │   │   ├── AppNavbar.jsx       # Application header with global search & notifications
-        │   │   ├── AppSidebar.jsx      # Desktop sidebar & responsive navigation
+        │   │   ├── AppNavbar.jsx       # Application header with real user menu & sign out
+        │   │   ├── AppSidebar.jsx      # Desktop sidebar & responsive navigation with real user
         │   │   ├── Footer.jsx          # System footer
         │   │   ├── LandingFooter.jsx   # Public landing footer
-        │   │   ├── LandingNavbar.jsx   # Public landing navigation
+        │   │   ├── LandingNavbar.jsx   # Public landing navigation with auth state switch
         │   │   └── MainLayout.jsx      # Layout wrapper
         │   ├── notebooks/
         │   │   ├── CreateNotebookModal.jsx # Create notebook dialog
@@ -130,21 +161,24 @@ studylm/
         │       ├── Textarea.jsx        # Multiline text areas
         │       └── Tooltip.jsx         # Positioning tooltips
         ├── context/
+        │   ├── AuthContext.jsx         # Global user state, login, register, logout, session init
         │   └── ToastContext.jsx        # Toast notification system
-        ├── mock/
-        │   └── mockData.js             # High-quality mock notebooks, sources & chat
         ├── pages/
-        │   ├── DashboardPage.jsx       # Personalized study dashboard
+        │   ├── DashboardPage.jsx       # Personalized study dashboard with user greeting
         │   ├── HealthPage.jsx          # Live diagnostic health inspector
         │   ├── HomePage.jsx            # Architectural monitor
         │   ├── LandingPage.jsx         # Public product landing page
+        │   ├── LoginPage.jsx           # Clean sign-in with show/hide password & redirect
         │   ├── NotebookWorkspacePage.jsx # 3-panel intelligent workspace
         │   ├── NotFoundPage.jsx        # 404 error page
-        │   ├── ProfilePage.jsx         # User profile & research stats
+        │   ├── ProfilePage.jsx         # Real user profile with inline edit & research metrics
+        │   ├── RegisterPage.jsx        # Account registration with password checklist
         │   └── SettingsPage.jsx        # Preferences, AI model & privacy
         ├── routes/
-        │   └── AppRoutes.jsx           # React Router route registry
-        ├── App.jsx                     # Root application with ToastProvider
+        │   └── AppRoutes.jsx           # React Router route registry with ProtectedRoute guards
+        ├── utils/
+        │   └── tokenStorage.js         # Centralized token persistence helper
+        ├── App.jsx                     # Root application wrapped in AuthProvider & ToastProvider
         ├── index.css                   # Custom Tailwind design tokens & base rules
         └── main.jsx                    # React DOM entry point
 ```
@@ -174,9 +208,11 @@ npm run install:all
 ## 🗺️ Application Routes
 
 - `/` — Public Product Landing Page
-- `/dashboard` — Notebooks Dashboard
-- `/notebooks/:id` — 3-Panel Study & Research Workspace
-- `/settings` — Preferences, Appearance & AI Grounding Settings
-- `/profile` — User Profile & Research Storage Quotas
-- `/health` — Live Backend & MongoDB System Diagnostics
+- `/login` — Sign In Form (redirects if already logged in)
+- `/register` — Account Registration (auto-login on creation)
+- `/dashboard` — Protected: Notebooks Dashboard
+- `/notebooks/:id` — Protected: 3-Panel Study & Research Workspace
+- `/settings` — Protected: Preferences, Appearance & AI Grounding Settings
+- `/profile` — Protected: Real User Profile & Research Storage Quotas
+- `/health` — Protected/Diagnostic: Live Backend & MongoDB System Diagnostics
 - `*` — 404 Error Page

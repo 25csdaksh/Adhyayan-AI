@@ -12,19 +12,21 @@ import {
   Settings,
   User,
   LogOut,
-  ExternalLink,
   ChevronDown,
 } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { Dropdown, DropdownItem, DropdownDivider } from '../ui/Dropdown';
 import { Button } from '../ui/Button';
-import { MOCK_USER } from '../../mock/mockData';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
 export const AppNavbar = ({
   onOpenMobileSidebar,
   onOpenCreateNotebook,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const { user, logout } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
 
   const handleSearch = (e) => {
@@ -33,6 +35,15 @@ export const AppNavbar = ({
       navigate(`/dashboard?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
+
+  const handleLogout = async () => {
+    await logout();
+    toast.success('You have been logged out successfully.', 'Signed Out');
+    navigate('/', { replace: true });
+  };
+
+  const displayName = user?.name || 'Researcher';
+  const displayEmail = user?.email || '';
 
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E2E7E3] h-16">
@@ -104,12 +115,12 @@ export const AppNavbar = ({
             </div>
             <div className="p-3 text-xs space-y-2">
               <div className="p-2 rounded-lg bg-[#FAFBF9] border border-[#E2E7E3]">
-                <p className="font-semibold text-[#17211D]">Source Indexed</p>
-                <p className="text-[11px] text-[#6B756F]">Kurose_Ross_Ch1-4.pdf ready for Q&amp;A</p>
+                <p className="font-semibold text-[#17211D]">Secure Session Active</p>
+                <p className="text-[11px] text-[#6B756F]">Logged in as {displayEmail}</p>
               </div>
               <div className="p-2 rounded-lg bg-[#FAFBF9] border border-[#E2E7E3]">
-                <p className="font-semibold text-[#17211D]">Quiz Generated</p>
-                <p className="text-[11px] text-[#6B756F]">3 new questions created for Computer Networks</p>
+                <p className="font-semibold text-[#17211D]">Source Indexed</p>
+                <p className="text-[11px] text-[#6B756F]">Computer Networks ready for Q&amp;A</p>
               </div>
             </div>
           </Dropdown>
@@ -119,15 +130,15 @@ export const AppNavbar = ({
             align="right"
             trigger={
               <div className="flex items-center gap-2 p-1 pl-1.5 rounded-xl hover:bg-[#F2F5F3] transition-colors cursor-pointer border border-transparent hover:border-[#E2E7E3]">
-                <Avatar name={MOCK_USER.name} src={MOCK_USER.avatar} size="sm" status="online" />
-                <span className="hidden md:inline text-xs font-semibold text-[#17211D]">{MOCK_USER.name}</span>
+                <Avatar name={displayName} src={user?.avatar} size="sm" status="online" />
+                <span className="hidden md:inline text-xs font-semibold text-[#17211D] max-w-[120px] truncate">{displayName}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-[#8E9993] hidden md:inline" />
               </div>
             }
           >
             <div className="px-4 py-3 border-b border-[#EDF1EE]">
-              <p className="text-xs font-bold text-[#17211D]">{MOCK_USER.fullName}</p>
-              <p className="text-[11px] text-[#6B756F] truncate">{MOCK_USER.email}</p>
+              <p className="text-xs font-bold text-[#17211D] truncate">{displayName}</p>
+              <p className="text-[11px] text-[#6B756F] truncate">{displayEmail}</p>
             </div>
             <DropdownItem icon={User} onClick={() => navigate('/profile')}>
               My Profile
@@ -139,8 +150,8 @@ export const AppNavbar = ({
               API System Diagnostics
             </DropdownItem>
             <DropdownDivider />
-            <DropdownItem icon={LogOut} danger onClick={() => navigate('/')}>
-              Switch to Public Landing
+            <DropdownItem icon={LogOut} danger onClick={handleLogout}>
+              Sign Out
             </DropdownItem>
           </Dropdown>
         </div>

@@ -1,27 +1,63 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   User,
   BookOpen,
   FileText,
-  HelpCircle,
   Clock,
   HardDrive,
   Calendar,
   Sparkles,
   ArrowRight,
   ShieldCheck,
-  Award,
+  Edit2,
+  Check,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
+import { Input } from '../components/ui/Input';
 import { MOCK_USER, MOCK_NOTEBOOKS } from '../mock/mockData';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export const ProfilePage = () => {
+  const { user, updateUser } = useAuth();
+  const toast = useToast();
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [nameInput, setNameInput] = useState(user?.name || '');
+  const [isSaving, setIsSaving] = useState(false);
+
   const { stats } = MOCK_USER;
   const storagePercent = Math.round((stats.storageUsedMB / stats.storageLimitMB) * 100);
+
+  const displayName = user?.name || 'Researcher';
+  const displayEmail = user?.email || 'researcher@studylm.edu';
+  const displayRole = user?.role === 'admin' ? 'Administrator' : 'Student & Researcher';
+  const formattedJoinDate = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : 'Recent';
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    if (!nameInput.trim() || nameInput.trim().length < 2) {
+      toast.error('Name must be at least 2 characters long.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await updateUser({ name: nameInput.trim() });
+      toast.success('Profile updated successfully!', 'Saved');
+      setEditModalOpen(false);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update profile.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto animate-in fade-in duration-150">
@@ -29,33 +65,39 @@ export const ProfilePage = () => {
       <div className="p-6 sm:p-8 rounded-2xl bg-white border border-[#E2E7E3] shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <Avatar
-            src={MOCK_USER.avatar}
-            name={MOCK_USER.name}
+            src={user?.avatar}
+            name={displayName}
             size="xl"
             status="online"
             className="ring-4 ring-[#E8F2EE]"
           />
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-[#17211D]">{MOCK_USER.fullName}</h1>
-              <Badge variant="forest" size="sm">Active Researcher</Badge>
+              <h1 className="text-xl sm:text-2xl font-bold text-[#17211D]">{displayName}</h1>
+              <Badge variant="forest" size="sm">Active Account</Badge>
             </div>
-            <p className="text-xs sm:text-sm text-[#6B756F] mt-0.5">{MOCK_USER.role}</p>
+            <p className="text-xs sm:text-sm text-[#6B756F] mt-0.5">{displayRole}</p>
             <div className="flex items-center gap-4 mt-2 text-xs text-[#8E9993]">
-              <span>{MOCK_USER.email}</span>
+              <span>{displayEmail}</span>
               <span>•</span>
               <span className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5" /> Joined {MOCK_USER.joinedDate}
+                <Calendar className="w-3.5 h-3.5" /> Joined {formattedJoinDate}
               </span>
             </div>
           </div>
         </div>
 
-        <Link to="/settings">
-          <Button variant="outline" size="sm">
-            Edit Profile
-          </Button>
-        </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          leftIcon={Edit2}
+          onClick={() => {
+            setNameInput(user?.name || '');
+            setEditModalOpen(true);
+          }}
+        >
+          Edit Profile
+        </Button>
       </div>
 
       {/* Research & Study Statistics */}
@@ -150,6 +192,40 @@ export const ProfilePage = () => {
           ))}
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="Edit Researcher Profile"
+        description="Update your display name across your StudyLM notebooks."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setEditModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleSaveProfile} isLoading={isSaving} leftIcon={Check}>
+              Save Changes
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSaveProfile} className="space-y-4">
+          <Input
+            label="Full Name"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            required
+            autoFocus
+          />
+          <Input
+            label="Email Address"
+            value={displayEmail}
+            disabled
+            hint="Email cannot be modified directly."
+          />
+        </form>
+      </Modal>
     </div>
   );
 };

@@ -17,18 +17,22 @@ import { Input } from '../components/ui/Input';
 import { Tabs } from '../components/ui/Tabs';
 import { EmptyState } from '../components/ui/EmptyState';
 import { NotebookCard } from '../components/notebooks/NotebookCard';
-import { MOCK_USER, MOCK_NOTEBOOKS } from '../mock/mockData';
+import { MOCK_NOTEBOOKS } from '../mock/mockData';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 export const DashboardPage = () => {
   const { openCreateNotebook } = useOutletContext() || {};
   const [searchParams] = useSearchParams();
   const urlQuery = searchParams.get('q') || '';
+  const { user } = useAuth();
 
   const [notebooks, setNotebooks] = useState(MOCK_NOTEBOOKS);
   const [searchQuery, setSearchQuery] = useState(urlQuery);
   const [activeCategory, setActiveCategory] = useState('all');
   const toast = useToast();
+
+  const displayName = user?.name ? user.name.split(' ')[0] : 'Researcher';
 
   const handleToggleFavorite = (id) => {
     setNotebooks((prev) =>
@@ -90,7 +94,7 @@ export const DashboardPage = () => {
             <span>Research Studio Active</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#17211D] tracking-tight">
-            Good morning, {MOCK_USER.name}
+            Good morning, {displayName}
           </h1>
           <p className="text-xs sm:text-sm text-[#6B756F] mt-1">
             Continue your research and learning across your grounded study sources.

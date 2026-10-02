@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   BookOpen,
   ArrowRight,
@@ -7,11 +8,15 @@ import {
   X,
   Sparkles,
   Activity,
+  LogIn,
+  UserPlus,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { Avatar } from '../ui/Avatar';
 
 export const LandingNavbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { isAuthenticated, user } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 bg-[#F7F8F6]/90 backdrop-blur-md border-b border-[#E2E7E3]">
@@ -26,7 +31,7 @@ export const LandingNavbar = () => {
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-lg text-[#17211D] tracking-tight font-sans">StudyLM</span>
                 <span className="text-[10px] font-semibold bg-[#E8F2EE] text-[#1F5E4B] px-2 py-0.2 rounded-full border border-[#D8E9E2]">
-                  v0.2
+                  v0.3
                 </span>
               </div>
               <p className="text-[10px] text-[#6B756F] font-medium -mt-0.5 hidden sm:block">AI Study &amp; Research Platform</p>
@@ -45,14 +50,31 @@ export const LandingNavbar = () => {
           <div className="hidden sm:flex items-center gap-3">
             <Link to="/health">
               <Button variant="ghost" size="sm" leftIcon={Activity}>
-                System Diagnostic
+                Diagnostics
               </Button>
             </Link>
-            <Link to="/dashboard">
-              <Button variant="primary" size="sm" rightIcon={ArrowRight}>
-                Open App Workspace
-              </Button>
-            </Link>
+
+            {isAuthenticated ? (
+              <Link to="/dashboard" className="flex items-center gap-2">
+                <Button variant="primary" size="sm" rightIcon={ArrowRight}>
+                  Open Workspace
+                </Button>
+                <Avatar name={user?.name} size="sm" status="online" />
+              </Link>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="outline" size="sm" leftIcon={LogIn}>
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button variant="primary" size="sm" rightIcon={ArrowRight}>
+                    Create Account
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Hamburger */}
@@ -107,16 +129,31 @@ export const LandingNavbar = () => {
               className="px-3 py-2 rounded-lg hover:bg-white hover:text-[#17211D] flex items-center gap-2"
             >
               <Activity className="w-4 h-4 text-[#1F5E4B]" />
-              System Diagnostic
+              Diagnostics
             </Link>
           </nav>
 
-          <div className="pt-2">
-            <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="block">
-              <Button variant="primary" size="md" className="w-full" rightIcon={ArrowRight}>
-                Open App Workspace
-              </Button>
-            </Link>
+          <div className="pt-2 flex flex-col gap-2">
+            {isAuthenticated ? (
+              <Link to="/dashboard" onClick={() => setMobileOpen(false)}>
+                <Button variant="primary" size="md" className="w-full" rightIcon={ArrowRight}>
+                  Open Workspace ({user?.name})
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/login" onClick={() => setMobileOpen(false)}>
+                  <Button variant="outline" size="md" className="w-full" leftIcon={LogIn}>
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/register" onClick={() => setMobileOpen(false)}>
+                  <Button variant="primary" size="md" className="w-full" rightIcon={ArrowRight}>
+                    Create Free Account
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}
