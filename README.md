@@ -4,7 +4,7 @@
 
 ---
 
-## 📌 Status: Phase 09 Completed (AI Study Tools)
+## 📌 Status: Phase 10 Completed (Web Sources + Advanced Research)
 
 - **Phase 01:** Foundation, Monorepo, Express Backend, MongoDB, CORS, `/api/health` *(Verified)*
 - **Phase 02:** Light-First Academic UI/UX, Design System, Landing Page, Dashboard, 3-Panel Workspace, Chat UI, Source Management, Settings, Profile *(Verified)*
@@ -15,6 +15,114 @@
 - **Phase 07:** Google Gemini Embeddings (`text-embedding-004`), MongoDB Atlas Vector Search & Semantic Retrieval *(Verified)*
 - **Phase 08:** Grounded RAG Chat, AI Answers & Citations Synthesis *(Verified)*
 - **Phase 09:** AI Study Tools (Summarizer, Flashcards, Quizzes, Mind Maps) *(Verified)*
+- **Phase 10:** Web Sources + Advanced Research Engine (SSRF Protection, Multi-Source Vector Scoping, Grounded Research) *(Verified)*
+
+---
+
+## 🌐 Web Sources + Advanced Research (Phase 10)
+
+### Phase 10 Architecture
+
+```text
+User Research Question
+        │
+        ▼
+Query & Scope Validation (notebook | web | all)
+        │
+        ▼
+Multi-Source Vector Search Scoping
+        │
+        ├───────────────────────────────┐
+        ▼                               ▼
+Notebook Sources Retrieval       Web Search / Ingested Web Sources
+        │                               │
+        │                               ▼
+        │                         Safe Fetcher (Hop-by-hop SSRF validation)
+        │                               │
+        │                               ▼
+        │                         Web Extractor (Cheerio, tag stripping, bounded size)
+        │                               │
+        │                               ▼
+        │                         Web Chunks & Gemini Embeddings
+        └───────────────────────────────┘
+                        │
+                        ▼
+            Combined Context Builder
+      (Structured [NOTEBOOK_SOURCE_X] & [WEB_SOURCE_X])
+                        │
+                        ▼
+             Grounded Research Prompt
+      (Anti-Prompt Injection & Conflict Separation)
+                        │
+                        ▼
+            Gemini Research Synthesis
+                        │
+                        ▼
+       Citation & Provenance Verification
+                        │
+                        ▼
+            Grounded Research Report
+```
+
+### URL Security & SSRF Protections (`backend/src/services/web/webSecurity.js`)
+
+All outbound HTTP requests pass through comprehensive security barriers:
+- **Protocol Enforcement:** Only `http:` and `https:` schemes allowed.
+- **DNS & IP Validation:** Resolves IP address via `dns.lookup` before connection.
+- **Loopback & Private Network Blocking:** Blocks `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10` (CGNAT), `169.254.0.0/16` (Link-local), `::1`, `fc00::/7`, `fe80::/10`.
+- **Cloud Metadata Endpoints Blocked:** `169.254.169.254`, `metadata.google.internal`, `100.100.100.200`.
+- **Manual Redirect Validation:** Revalidates every single redirect destination hop against SSRF rules up to `WEB_MAX_REDIRECTS=5`.
+- **Size Bounds:** Enforces `WEB_MAX_RESPONSE_BYTES=5000000` (5MB) and `WEB_MAX_EXTRACTED_CHARS=2000000` (2MB).
+
+### Web Source Ingestion & Chunking (`backend/src/models/WebSource.js`)
+
+Web pages are ingested, cleaned (stripping scripts, styles, forms, ads, and navigation), hashed via SHA-256 for caching, and chunked using the shared `Chunk` model with:
+- `sourceKind`: `'web'`
+- `webSourceId`: ObjectId reference to `WebSource`
+- Full 768-dimensional Gemini embeddings stored directly in MongoDB for instant vector search.
+
+### Multi-Source Vector Search Scoping (`backend/src/services/search/vectorSearchService.js`)
+
+Semantic search natively supports:
+- `sourceScope: 'notebook'` — Searches only document chunks.
+- `sourceScope: 'web'` — Searches only web source chunks.
+- `sourceScope: 'all'` — Performs unified cross-source semantic ranking with provenance tagging.
+
+### Deep Research Engine (`backend/src/services/research/`)
+
+- **Prompt Injection Defense:** Treats all external webpage text strictly as untrusted data within `<web_source>` delimiters. System instructions explicitly command the model never to obey instructions embedded within sources.
+- **Source Conflict Handling:** When notebook and web sources disagree, the engine highlights the disagreement and explicitly cites both sources rather than hallucinating a resolution.
+- **Provenance Citations:** Returns distinct badges and links for Notebook Documents vs. Web Sources with direct URL navigation.
+
+### Web Source & Research APIs
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/notebooks/:notebookId/web-sources` | Ingest new web source URL |
+| `GET` | `/api/notebooks/:notebookId/web-sources` | List web sources for notebook |
+| `GET` | `/api/notebooks/:notebookId/web-sources/:webSourceId` | Get single web source details |
+| `POST` | `/api/notebooks/:notebookId/web-sources/:webSourceId/refresh` | Force refresh & re-index web source |
+| `DELETE` | `/api/notebooks/:notebookId/web-sources/:webSourceId` | Delete web source & its chunks |
+| `POST` | `/api/notebooks/:notebookId/research` | Run deep multi-source research synthesis |
+
+### Environment Configuration
+
+```bash
+WEB_FETCH_TIMEOUT_MS=15000
+WEB_MAX_RESPONSE_BYTES=5000000
+WEB_MAX_EXTRACTED_CHARS=2000000
+WEB_MAX_REDIRECTS=5
+WEB_SOURCE_CACHE_TTL_HOURS=24
+WEB_SEARCH_PROVIDER=duckduckgo
+WEB_SEARCH_API_KEY=
+RESEARCH_MAX_SEARCH_RESULTS=5
+RESEARCH_MAX_FETCHED_SOURCES=5
+RESEARCH_MAX_CONTEXT_CHUNKS=10
+RESEARCH_MAX_CONTEXT_CHARS=40000
+RESEARCH_MAX_HISTORY_MESSAGES=8
+MAX_RESEARCH_QUERY_LENGTH=2000
+```
+
 
 ---
 

@@ -47,6 +47,25 @@ const config = {
     urlFetchTimeoutMs: parseInt(process.env.URL_FETCH_TIMEOUT_MS || '15000', 10),
     maxUrlResponseMb: parseInt(process.env.MAX_URL_RESPONSE_MB || '5', 10),
   },
+  web: {
+    fetchTimeoutMs: parseInt(process.env.WEB_FETCH_TIMEOUT_MS || '15000', 10),
+    maxResponseBytes: parseInt(process.env.WEB_MAX_RESPONSE_BYTES || '5000000', 10),
+    maxExtractedChars: parseInt(process.env.WEB_MAX_EXTRACTED_CHARS || '2000000', 10),
+    maxRedirects: parseInt(process.env.WEB_MAX_REDIRECTS || '5', 10),
+    cacheTtlHours: parseInt(process.env.WEB_SOURCE_CACHE_TTL_HOURS || '24', 10),
+  },
+  webSearch: {
+    provider: process.env.WEB_SEARCH_PROVIDER || 'duckduckgo',
+    apiKey: process.env.WEB_SEARCH_API_KEY || '',
+  },
+  research: {
+    maxSearchResults: parseInt(process.env.RESEARCH_MAX_SEARCH_RESULTS || '5', 10),
+    maxFetchedSources: parseInt(process.env.RESEARCH_MAX_FETCHED_SOURCES || '5', 10),
+    maxContextChunks: parseInt(process.env.RESEARCH_MAX_CONTEXT_CHUNKS || '10', 10),
+    maxContextChars: parseInt(process.env.RESEARCH_MAX_CONTEXT_CHARS || '40000', 10),
+    maxHistoryMessages: parseInt(process.env.RESEARCH_MAX_HISTORY_MESSAGES || '8', 10),
+    maxQueryLength: parseInt(process.env.MAX_RESEARCH_QUERY_LENGTH || '2000', 10),
+  },
 };
 
 // Validate critical configurations

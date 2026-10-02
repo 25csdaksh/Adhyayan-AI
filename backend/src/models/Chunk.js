@@ -5,12 +5,26 @@ const chunkSchema = new mongoose.Schema(
     documentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Document',
-      required: [true, 'Document reference ID is required'],
+      default: null,
+      index: true,
+    },
+    webSourceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'WebSource',
+      default: null,
+      index: true,
+    },
+    sourceKind: {
+      type: String,
+      enum: ['notebook', 'web'],
+      default: 'notebook',
+      index: true,
     },
     notebookId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Notebook',
       required: [true, 'Notebook reference ID is required'],
+      index: true,
     },
     chunkIndex: {
       type: Number,
@@ -68,10 +82,28 @@ const chunkSchema = new mongoose.Schema(
   }
 );
 
-// Indexes for high performance querying and vector constraints
-chunkSchema.index({ documentId: 1, chunkIndex: 1 }, { unique: true });
-chunkSchema.index({ notebookId: 1 });
+// Indexes for high performance querying and vector constraints with partial filters
+chunkSchema.index(
+  { documentId: 1, chunkIndex: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { documentId: { $exists: true, $type: 'objectId' } },
+  }
+);
+chunkSchema.index(
+  { webSourceId: 1, chunkIndex: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { webSourceId: { $exists: true, $type: 'objectId' } },
+  }
+);
+chunkSchema.index({ notebookId: 1, sourceKind: 1 });
 
 const Chunk = mongoose.model('Chunk', chunkSchema);
+
+// Sync indexes in background
+Chunk.syncIndexes().catch((err) => {
+  console.warn('[Chunk Index Warning] Could not sync indexes automatically:', err.message);
+});
 
 module.exports = Chunk;

@@ -11,6 +11,8 @@ const { authenticate } = require('../middlewares/auth');
 const documentRoutes = require('./document.routes');
 const chatRoutes = require('./chat.routes');
 const studyToolRoutes = require('./studyTool.routes');
+const webSourceRoutes = require('./webSource.routes');
+const researchRoutes = require('./research.routes');
 const { searchNotebook } = require('../controllers/search.controller');
 
 const router = express.Router();
@@ -29,6 +31,12 @@ router.use('/:notebookId/chats', chatRoutes);
 
 // Re-route into study tools routes
 router.use('/:notebookId/study-tools', studyToolRoutes);
+
+// Re-route into web source routes
+router.use('/:notebookId/web-sources', webSourceRoutes);
+
+// Re-route into research routes
+router.use('/:notebookId/research', researchRoutes);
 
 router.route('/')
   .post(createNotebook)

@@ -40,10 +40,15 @@ import { StudyToolsPanel } from '../components/study/StudyToolsPanel';
 import { notebookService } from '../api/notebookService';
 import { documentService } from '../api/documentService';
 import { chatService } from '../api/chatService';
+import { webSourceService } from '../api/webSourceService';
+import { WebSourceCard } from '../components/sources/WebSourceCard';
+import { AddWebSourceModal } from '../components/sources/AddWebSourceModal';
+import { ResearchPanel } from '../components/research/ResearchPanel';
 import { useToast } from '../context/ToastContext';
 import { EmptyState } from '../components/ui/EmptyState';
 import { DeleteSourceModal } from '../components/sources/DeleteSourceModal';
 import { Skeleton } from '../components/ui/Skeleton';
+import { Globe, Compass } from 'lucide-react';
 
 export const NotebookWorkspacePage = () => {
   const { id } = useParams();
@@ -53,8 +58,12 @@ export const NotebookWorkspacePage = () => {
   const [notebook, setNotebook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sourcesLoading, setSourcesLoading] = useState(true);
+  const [webSourcesLoading, setWebSourcesLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sources, setSources] = useState([]);
+  const [webSources, setWebSources] = useState([]);
+  const [activeSourceTab, setActiveSourceTab] = useState('all'); // 'all' | 'documents' | 'web'
+  const [activeStudioTab, setActiveStudioTab] = useState('study'); // 'study' | 'research'
 
   // Chat State
   const [chatSessions, setChatSessions] = useState([]);
@@ -65,8 +74,10 @@ export const NotebookWorkspacePage = () => {
   const [citationPreview, setCitationPreview] = useState(null);
 
   const [addSourceOpen, setAddSourceOpen] = useState(false);
+  const [addWebSourceOpen, setAddWebSourceOpen] = useState(false);
   const [sourceToDelete, setSourceToDelete] = useState(null);
   const [isDeletingSource, setIsDeletingSource] = useState(false);
+  const [refreshingWebSourceId, setRefreshingWebSourceId] = useState(null);
   const [selectedSourceSnippet, setSelectedSourceSnippet] = useState(null);
 
   // Responsive workspace tab state for tablet & mobile
@@ -85,15 +96,17 @@ export const NotebookWorkspacePage = () => {
     scrollToBottom();
   }, [messages, isSending]);
 
-  // Load Notebook & Sources
+  // Load Notebook, Sources & Web Sources
   const fetchWorkspaceData = async (isMounted) => {
     setLoading(true);
     setSourcesLoading(true);
+    setWebSourcesLoading(true);
     setError(null);
     try {
-      const [nbRes, docsRes, chatsRes] = await Promise.all([
+      const [nbRes, docsRes, webRes, chatsRes] = await Promise.all([
         notebookService.getNotebook(id),
         documentService.getDocuments(id),
+        webSourceService.getWebSources(id).catch(() => ({ data: { webSources: [] } })),
         chatService.getChatSessions(id).catch(() => ({ data: { sessions: [] } })),
       ]);
 
@@ -106,6 +119,10 @@ export const NotebookWorkspacePage = () => {
 
         if (docsRes?.data?.documents) {
           setSources(docsRes.data.documents);
+        }
+
+        if (webRes?.data?.webSources) {
+          setWebSources(webRes.data.webSources);
         }
 
         const sessions = chatsRes?.data?.sessions || [];
@@ -136,6 +153,7 @@ export const NotebookWorkspacePage = () => {
       if (isMounted) {
         setLoading(false);
         setSourcesLoading(false);
+        setWebSourcesLoading(false);
       }
     }
   };
@@ -180,18 +198,24 @@ export const NotebookWorkspacePage = () => {
   }, [id, activeSessionId]);
 
   // Periodic polling when any source is pending or processing
-  const hasProcessingSources = sources.some(
-    (s) => s.status === 'pending' || s.status === 'processing'
-  );
+  const hasProcessingSources =
+    sources.some((s) => s.status === 'pending' || s.status === 'processing') ||
+    webSources.some((w) => w.status === 'pending' || w.status === 'processing');
 
   useEffect(() => {
     if (!id || !hasProcessingSources) return;
 
     const interval = setInterval(async () => {
       try {
-        const docsRes = await documentService.getDocuments(id);
+        const [docsRes, webRes] = await Promise.all([
+          documentService.getDocuments(id),
+          webSourceService.getWebSources(id).catch(() => null),
+        ]);
         if (docsRes?.data?.documents) {
           setSources(docsRes.data.documents);
+        }
+        if (webRes?.data?.webSources) {
+          setWebSources(webRes.data.webSources);
         }
       } catch {
         // Silently ignore polling errors
@@ -204,6 +228,40 @@ export const NotebookWorkspacePage = () => {
   const handleAddSourceSuccess = (newDoc) => {
     if (newDoc) {
       setSources((prev) => [newDoc, ...prev]);
+    }
+  };
+
+  const handleAddWebSourceSuccess = (newWebSource) => {
+    if (newWebSource) {
+      setWebSources((prev) => [newWebSource, ...prev]);
+      toast.success('Web source added and processed!', 'Source Added');
+    }
+  };
+
+  const handleDeleteWebSource = async (webSourceId) => {
+    if (!webSourceId) return;
+    try {
+      await webSourceService.deleteWebSource(id, webSourceId);
+      setWebSources((prev) => prev.filter((w) => w._id !== webSourceId));
+      toast.success('Web source removed', 'Deleted');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete web source', 'Error');
+    }
+  };
+
+  const handleRefreshWebSource = async (webSourceId) => {
+    if (!webSourceId) return;
+    setRefreshingWebSourceId(webSourceId);
+    try {
+      const res = await webSourceService.refreshWebSource(id, webSourceId);
+      if (res?.data) {
+        setWebSources((prev) => prev.map((w) => (w._id === webSourceId ? res.data : w)));
+        toast.success('Web source re-fetched & re-indexed!', 'Refreshed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to refresh web source', 'Error');
+    } finally {
+      setRefreshingWebSourceId(null);
     }
   };
 
@@ -396,7 +454,7 @@ export const NotebookWorkspacePage = () => {
                 {notebook.title}
               </h1>
               <Badge variant="forest" size="sm" dot>
-                {sources.length} sources active
+                {sources.length + webSources.length} sources active
               </Badge>
             </div>
             <p className="text-[11px] text-[#6B756F] truncate hidden sm:block">
@@ -410,7 +468,7 @@ export const NotebookWorkspacePage = () => {
           <button
             type="button"
             onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
-            className="p-1.5 hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors"
+            className="p-1.5 hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors cursor-pointer"
             title={leftPanelCollapsed ? 'Show Sources' : 'Collapse Sources'}
           >
             {leftPanelCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4 text-[#1F5E4B]" />}
@@ -418,7 +476,7 @@ export const NotebookWorkspacePage = () => {
           <button
             type="button"
             onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)}
-            className="p-1.5 hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors"
+            className="p-1.5 hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors cursor-pointer"
             title={rightPanelCollapsed ? 'Show Study Studio' : 'Collapse Study Studio'}
           >
             {rightPanelCollapsed ? <PanelRight className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4 text-[#1F5E4B]" />}
@@ -436,7 +494,7 @@ export const NotebookWorkspacePage = () => {
                 : 'text-[#6B756F]'
             }`}
           >
-            Sources ({sources.length})
+            Sources ({sources.length + webSources.length})
           </button>
           <button
             type="button"
@@ -458,7 +516,7 @@ export const NotebookWorkspacePage = () => {
                 : 'text-[#6B756F]'
             }`}
           >
-            Study Tools
+            Studio
           </button>
         </div>
 
@@ -519,10 +577,19 @@ export const NotebookWorkspacePage = () => {
           <Button
             variant="secondary"
             size="sm"
+            leftIcon={Globe}
+            onClick={() => setAddWebSourceOpen(true)}
+          >
+            Add Web
+          </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
             leftIcon={Plus}
             onClick={() => setAddSourceOpen(true)}
           >
-            Add Source
+            Add Doc
           </Button>
         </div>
       </div>
@@ -536,43 +603,108 @@ export const NotebookWorkspacePage = () => {
             ${mobileActivePanel === 'sources' ? 'flex w-full absolute inset-0 z-20 pt-16 bg-white' : 'hidden lg:flex'}`}
         >
           {/* Sources Header */}
-          <div className="p-4 border-b border-[#EDF1EE] flex items-center justify-between shrink-0">
-            <div>
-              <h2 className="text-sm font-bold text-[#17211D] flex items-center gap-1.5">
-                <FileText className="w-4 h-4 text-[#1F5E4B]" />
-                Sources ({sources.length})
-              </h2>
-              <p className="text-[11px] text-[#6B756F]">Active grounded documents</p>
+          <div className="p-3.5 border-b border-[#EDF1EE] space-y-2.5 shrink-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-[#17211D] flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-[#1F5E4B]" />
+                  Sources ({sources.length + webSources.length})
+                </h2>
+                <p className="text-[11px] text-[#6B756F]">Active grounded knowledge</p>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setAddWebSourceOpen(true)}
+                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                  title="Add Web Source"
+                >
+                  <Globe className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddSourceOpen(true)}
+                  className="p-1.5 text-[#1F5E4B] hover:bg-[#E8EFEA] rounded-lg transition-colors cursor-pointer"
+                  title="Add Document"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            <Button
-              variant="secondary"
-              size="sm"
-              leftIcon={Plus}
-              onClick={() => setAddSourceOpen(true)}
-            >
-              Add
-            </Button>
+            {/* Source Category Tabs */}
+            <div className="flex items-center p-0.5 bg-[#F2F5F3] rounded-lg text-[11px] font-semibold text-[#6B756F]">
+              <button
+                type="button"
+                onClick={() => setActiveSourceTab('all')}
+                className={`flex-1 py-1 rounded-md transition-all cursor-pointer ${
+                  activeSourceTab === 'all'
+                    ? 'bg-white text-[#17211D] shadow-2xs font-bold'
+                    : 'hover:text-[#17211D]'
+                }`}
+              >
+                All ({sources.length + webSources.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSourceTab('documents')}
+                className={`flex-1 py-1 rounded-md transition-all cursor-pointer ${
+                  activeSourceTab === 'documents'
+                    ? 'bg-white text-[#1F5E4B] shadow-2xs font-bold'
+                    : 'hover:text-[#17211D]'
+                }`}
+              >
+                Docs ({sources.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSourceTab('web')}
+                className={`flex-1 py-1 rounded-md transition-all cursor-pointer ${
+                  activeSourceTab === 'web'
+                    ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                    : 'hover:text-[#17211D]'
+                }`}
+              >
+                Web ({webSources.length})
+              </button>
+            </div>
           </div>
 
           {/* Source Cards List */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
-            {sourcesLoading ? (
+            {sourcesLoading || webSourcesLoading ? (
               <div className="space-y-2.5">
                 <Skeleton className="h-16 w-full rounded-xl" />
                 <Skeleton className="h-16 w-full rounded-xl" />
                 <Skeleton className="h-16 w-full rounded-xl" />
               </div>
-            ) : sources.length > 0 ? (
-              sources.map((source) => (
-                <SourceCard
-                  key={source._id || source.id}
-                  source={source}
-                  onRemove={handleDeleteSourceClick}
-                  onReprocess={handleReprocessSource}
-                  onViewSnippet={(s) => setSelectedSourceSnippet(s)}
-                />
-              ))
+            ) : (sources.length > 0 || webSources.length > 0) ? (
+              <>
+                {/* Documents section */}
+                {(activeSourceTab === 'all' || activeSourceTab === 'documents') &&
+                  sources.map((source) => (
+                    <SourceCard
+                      key={source._id || source.id}
+                      source={source}
+                      onRemove={handleDeleteSourceClick}
+                      onReprocess={handleReprocessSource}
+                      onViewSnippet={(s) => setSelectedSourceSnippet(s)}
+                    />
+                  ))}
+
+                {/* Web Sources section */}
+                {(activeSourceTab === 'all' || activeSourceTab === 'web') &&
+                  webSources.map((webSource) => (
+                    <WebSourceCard
+                      key={webSource._id || webSource.id}
+                      webSource={webSource}
+                      isRefreshing={refreshingWebSourceId === (webSource._id || webSource.id)}
+                      onRefresh={handleRefreshWebSource}
+                      onDelete={handleDeleteWebSource}
+                    />
+                  ))}
+              </>
             ) : (
               <div className="text-center py-12 px-4 text-xs text-[#6B756F] space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-[#E8F2EE] text-[#1F5E4B] flex items-center justify-center mx-auto mb-2">
@@ -580,25 +712,34 @@ export const NotebookWorkspacePage = () => {
                 </div>
                 <p className="font-semibold text-sm text-[#17211D]">No sources yet</p>
                 <p className="text-xs text-[#6B756F] leading-relaxed max-w-xs mx-auto">
-                  Add PDFs, documents, notes, or web sources to start building your research notebook.
+                  Add PDFs, notes, or web articles to build your grounded research base.
                 </p>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  leftIcon={Plus}
-                  className="mt-2"
-                  onClick={() => setAddSourceOpen(true)}
-                >
-                  Add Source
-                </Button>
+                <div className="flex justify-center gap-2 pt-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={Globe}
+                    onClick={() => setAddWebSourceOpen(true)}
+                  >
+                    Add Web
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    leftIcon={Plus}
+                    onClick={() => setAddSourceOpen(true)}
+                  >
+                    Add Doc
+                  </Button>
+                </div>
               </div>
             )}
           </div>
 
           {/* Sources Footer Summary */}
           <div className="p-3 bg-[#FAFBF9] border-t border-[#EDF1EE] text-[11px] text-[#6B756F] flex items-center justify-between shrink-0">
-            <span>Storage: Cloudinary</span>
-            <span className="text-[#1F5E4B] font-semibold">{sources.length} Active</span>
+            <span>{sources.length} Docs • {webSources.length} Web</span>
+            <span className="text-[#1F5E4B] font-semibold">{sources.length + webSources.length} Active</span>
           </div>
         </div>
 
@@ -638,7 +779,7 @@ export const NotebookWorkspacePage = () => {
                   Ask anything about your sources
                 </h3>
                 <p className="text-xs sm:text-sm text-[#6B756F] leading-relaxed">
-                  Upload your materials and start exploring your knowledge. Every answer is grounded directly in your uploaded notes with verifiable citations.
+                  Upload materials and start exploring your knowledge. Every answer is grounded directly in your notebook documents and web sources with verifiable citations.
                 </p>
               </div>
             )}
@@ -671,33 +812,77 @@ export const NotebookWorkspacePage = () => {
               onSend={handleSendMessage}
               disabled={isSending}
               onAttachSource={() => setAddSourceOpen(true)}
-              sourceCount={sources.length}
+              sourceCount={sources.length + webSources.length}
             />
           </div>
         </div>
 
-        {/* PANEL 3: RIGHT STUDY STUDIO TOOLS PANEL */}
+        {/* PANEL 3: RIGHT STUDY STUDIO TOOLS / RESEARCH PANEL */}
         <div
           className={`bg-white border-l border-[#E2E7E3] flex flex-col transition-all duration-200 shrink-0
-            ${rightPanelCollapsed ? 'w-0 hidden' : 'w-72 sm:w-80 lg:w-84'}
+            ${rightPanelCollapsed ? 'w-0 hidden' : 'w-80 sm:w-88 lg:w-96'}
             ${mobileActivePanel === 'tools' ? 'flex w-full absolute inset-0 z-20 pt-16 bg-white' : 'hidden lg:flex'}`}
         >
+          {/* Studio Tab Switcher */}
+          <div className="p-3 border-b border-[#EDF1EE] flex items-center gap-1.5 bg-[#FAFBF9] shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveStudioTab('study')}
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                activeStudioTab === 'study'
+                  ? 'bg-white text-[#1F5E4B] shadow-2xs border border-[#E2E7E3]'
+                  : 'text-[#6B756F] hover:text-[#17211D]'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Study Tools</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveStudioTab('research')}
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                activeStudioTab === 'research'
+                  ? 'bg-white text-blue-700 shadow-2xs border border-[#E2E7E3]'
+                  : 'text-[#6B756F] hover:text-[#17211D]'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5 text-blue-600" />
+              <span>Deep Research</span>
+            </button>
+          </div>
+
           <div className="flex-1 overflow-y-auto p-4">
-            <StudyToolsPanel
-              notebookId={id}
-              notebookTitle={notebook?.title}
-              onSelectCitation={(cit) => setCitationPreview(cit)}
-            />
+            {activeStudioTab === 'study' ? (
+              <StudyToolsPanel
+                notebookId={id}
+                notebookTitle={notebook?.title}
+                onSelectCitation={(cit) => setCitationPreview(cit)}
+              />
+            ) : (
+              <ResearchPanel
+                notebookId={id}
+                onSelectCitation={(cit) => setCitationPreview(cit)}
+              />
+            )}
           </div>
         </div>
       </div>
 
-      {/* Add Source Modal */}
+      {/* Add Document Source Modal */}
       <AddSourceModal
         isOpen={addSourceOpen}
         onClose={() => setAddSourceOpen(false)}
         notebookId={id}
         onSourceAdded={handleAddSourceSuccess}
+      />
+
+      {/* Add Web Source Modal */}
+      <AddWebSourceModal
+        isOpen={addWebSourceOpen}
+        onClose={() => setAddWebSourceOpen(false)}
+        notebookId={id}
+        onSourceAdded={handleAddWebSourceSuccess}
       />
 
       {/* Delete Source Confirmation Modal */}
@@ -713,33 +898,56 @@ export const NotebookWorkspacePage = () => {
       <Modal
         isOpen={Boolean(citationPreview)}
         onClose={() => setCitationPreview(null)}
-        title={citationPreview?.documentTitle || 'Grounded Citation'}
+        title={citationPreview?.documentTitle || citationPreview?.domain || 'Grounded Citation'}
         description={`Source reference [${citationPreview?.citationNumber || 1}] • ${
-          citationPreview?.pageNumber ? `Page ${citationPreview.pageNumber}` : citationPreview?.sourceType?.toUpperCase() || 'Source Document'
+          citationPreview?.sourceKind === 'web' || citationPreview?.url
+            ? `Web Source (${citationPreview?.domain || 'Verified Web'})`
+            : citationPreview?.pageNumber
+            ? `Page ${citationPreview.pageNumber}`
+            : citationPreview?.sourceType?.toUpperCase() || 'Notebook Source'
         }`}
         footer={
-          <Button variant="primary" onClick={() => setCitationPreview(null)}>
-            Close Preview
-          </Button>
+          <div className="flex items-center justify-between w-full gap-2">
+            {citationPreview?.url && (
+              <a
+                href={citationPreview.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:underline flex items-center gap-1 font-medium"
+              >
+                <span>Visit Original Website</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+            <Button variant="primary" onClick={() => setCitationPreview(null)} className="ml-auto">
+              Close Preview
+            </Button>
+          </div>
         }
       >
         <div className="space-y-4 text-xs sm:text-sm text-[#17211D]">
           <div className="p-3 bg-[#FAFBF9] rounded-xl border border-[#E2E7E3] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#1F5E4B]" />
-              <span className="font-semibold text-[#17211D]">{citationPreview?.documentTitle}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              {citationPreview?.sourceKind === 'web' || citationPreview?.url ? (
+                <Globe className="w-4 h-4 text-blue-600 shrink-0" />
+              ) : (
+                <FileText className="w-4 h-4 text-[#1F5E4B] shrink-0" />
+              )}
+              <span className="font-semibold text-[#17211D] truncate">
+                {citationPreview?.documentTitle || citationPreview?.domain || 'Research Source'}
+              </span>
             </div>
-            <Badge variant="forest" size="sm">
-              {citationPreview?.pageNumber ? `Page ${citationPreview.pageNumber}` : `${citationPreview?.sourceType || 'Text'} Source`}
+            <Badge variant={citationPreview?.sourceKind === 'web' || citationPreview?.url ? 'blue' : 'forest'} size="sm">
+              {citationPreview?.sourceKind === 'web' || citationPreview?.url ? 'Web Source' : 'Notebook'}
             </Badge>
           </div>
 
           <div className="p-4 bg-white rounded-xl border border-[#D8E9E2] space-y-2 shadow-2xs">
             <div className="flex items-center gap-1.5 text-xs font-bold text-[#1F5E4B]">
-              <Quote className="w-3.5 h-3.5" /> Grounded Passage Excerpt:
+              <Quote className="w-3.5 h-3.5" /> Grounded Evidence Passage:
             </div>
             <p className="text-[#17211D] text-xs sm:text-sm leading-relaxed border-l-3 border-[#1F5E4B] pl-3 py-1 italic bg-[#FAFBF9] rounded-r-lg">
-              "{citationPreview?.snippet || 'Verifiable source text content extracted during document indexing.'}"
+              "{citationPreview?.snippet || 'Verifiable source text content extracted during indexing.'}"
             </p>
           </div>
         </div>

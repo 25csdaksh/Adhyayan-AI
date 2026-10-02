@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Chunk = require('../../models/Chunk');
 const Document = require('../../models/Document');
+const WebSource = require('../../models/WebSource');
 const { generateEmbedding } = require('../embedding/embeddingService');
 const config = require('../../config/env');
 
@@ -28,11 +29,12 @@ function calculateCosineSimilarity(vecA, vecB) {
 }
 
 /**
- * Semantic Vector Search within a specific notebook
+ * Semantic Vector Search within a specific notebook across notebook documents and/or web sources
  *
  * @param {Object} params
  * @param {string|mongoose.Types.ObjectId} params.notebookId
  * @param {string} params.query
+ * @param {'notebook'|'web'|'all'} [params.sourceScope='notebook']
  * @param {number} [params.topK=5]
  * @param {number} [params.scoreThreshold=0.5]
  * @returns {Promise<{ query: string, results: Array<Object> }>}
@@ -40,6 +42,7 @@ function calculateCosineSimilarity(vecA, vecB) {
 async function semanticSearch({
   notebookId,
   query,
+  sourceScope = 'notebook',
   topK = config.search?.defaultTopK || 5,
   scoreThreshold = config.search?.defaultScoreThreshold || 0.5,
 }) {
@@ -60,6 +63,14 @@ async function semanticSearch({
   const notebookObjectId = new mongoose.Types.ObjectId(notebookId);
   let scoredResults = [];
 
+  // Define scope filter
+  const scopeFilter = { notebookId: notebookObjectId };
+  if (sourceScope === 'notebook') {
+    scopeFilter.sourceKind = { $ne: 'web' };
+  } else if (sourceScope === 'web') {
+    scopeFilter.sourceKind = 'web';
+  }
+
   // 2. Try native MongoDB Atlas Vector Search ($vectorSearch)
   try {
     const atlasPipeline = [
@@ -70,15 +81,15 @@ async function semanticSearch({
           queryVector: queryVector,
           numCandidates: Math.max(boundedTopK * 10, 50),
           limit: boundedTopK,
-          filter: {
-            notebookId: notebookObjectId,
-          },
+          filter: scopeFilter,
         },
       },
       {
         $project: {
           _id: 1,
           documentId: 1,
+          webSourceId: 1,
+          sourceKind: 1,
           notebookId: 1,
           chunkIndex: 1,
           text: 1,
@@ -97,7 +108,9 @@ async function semanticSearch({
         .filter((r) => r.score >= boundedThreshold)
         .map((r) => ({
           chunkId: r._id,
-          documentId: r.documentId,
+          documentId: r.documentId || null,
+          webSourceId: r.webSourceId || null,
+          sourceKind: r.sourceKind || (r.webSourceId ? 'web' : 'notebook'),
           notebookId: r.notebookId,
           chunkIndex: r.chunkIndex,
           text: r.text,
@@ -108,13 +121,14 @@ async function semanticSearch({
         }));
     }
   } catch (atlasErr) {
-    // If $vectorSearch is not supported in local MongoDB instance or index is missing,
-    // execute in-memory cosine similarity fallback scoped strictly to this notebook
-    const notebookChunks = await Chunk.find({
-      notebookId: notebookObjectId,
+    // In-memory fallback
+    const findQuery = {
+      ...scopeFilter,
       embedding: { $exists: true, $ne: [] },
-    })
-      .select('_id documentId notebookId chunkIndex text pageNumber pageStart pageEnd +embedding')
+    };
+
+    const notebookChunks = await Chunk.find(findQuery)
+      .select('_id documentId webSourceId sourceKind notebookId chunkIndex text pageNumber pageStart pageEnd +embedding')
       .lean();
 
     scoredResults = notebookChunks
@@ -122,7 +136,9 @@ async function semanticSearch({
         const score = calculateCosineSimilarity(queryVector, chunk.embedding);
         return {
           chunkId: chunk._id,
-          documentId: chunk.documentId,
+          documentId: chunk.documentId || null,
+          webSourceId: chunk.webSourceId || null,
+          sourceKind: chunk.sourceKind || (chunk.webSourceId ? 'web' : 'notebook'),
           notebookId: chunk.notebookId,
           chunkIndex: chunk.chunkIndex,
           text: chunk.text,
@@ -137,25 +153,59 @@ async function semanticSearch({
       .slice(0, boundedTopK);
   }
 
-  // 3. Populate Document titles and metadata without exposing embeddings
+  // 3. Populate Document titles & WebSource metadata without exposing embeddings
   if (scoredResults.length > 0) {
-    const documentIds = [...new Set(scoredResults.map((r) => r.documentId.toString()))];
-    const documents = await Document.find({
-      _id: { $in: documentIds },
-      notebookId: notebookObjectId,
-    })
-      .select('_id title sourceType')
-      .lean();
+    const documentIds = [
+      ...new Set(
+        scoredResults
+          .filter((r) => r.documentId)
+          .map((r) => r.documentId.toString())
+      ),
+    ];
+    const webSourceIds = [
+      ...new Set(
+        scoredResults
+          .filter((r) => r.webSourceId)
+          .map((r) => r.webSourceId.toString())
+      ),
+    ];
+
+    const [documents, webSources] = await Promise.all([
+      documentIds.length > 0
+        ? Document.find({ _id: { $in: documentIds }, notebookId: notebookObjectId })
+            .select('_id title sourceType')
+            .lean()
+        : [],
+      webSourceIds.length > 0
+        ? WebSource.find({ _id: { $in: webSourceIds }, notebookId: notebookObjectId })
+            .select('_id title domain canonicalUrl url')
+            .lean()
+        : [],
+    ]);
 
     const docMap = new Map(documents.map((d) => [d._id.toString(), d]));
+    const webMap = new Map(webSources.map((w) => [w._id.toString(), w]));
 
     scoredResults = scoredResults.map((r) => {
-      const doc = docMap.get(r.documentId.toString());
-      return {
-        ...r,
-        documentTitle: doc?.title || 'Document',
-        sourceType: doc?.sourceType || 'text',
-      };
+      if (r.webSourceId) {
+        const web = webMap.get(r.webSourceId.toString());
+        return {
+          ...r,
+          documentTitle: web?.title || 'Web Source',
+          sourceType: 'webpage',
+          domain: web?.domain || '',
+          url: web?.canonicalUrl || web?.url || '',
+          sourceKind: 'web',
+        };
+      } else {
+        const doc = r.documentId ? docMap.get(r.documentId.toString()) : null;
+        return {
+          ...r,
+          documentTitle: doc?.title || 'Document',
+          sourceType: doc?.sourceType || 'text',
+          sourceKind: 'notebook',
+        };
+      }
     });
   }
 
