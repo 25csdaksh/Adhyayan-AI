@@ -22,6 +22,9 @@ const config = {
     apiKey: process.env.GEMINI_API_KEY || '',
     embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
     dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '768', 10),
+    enablePseudoEmbeddingFallback:
+      process.env.NODE_ENV !== 'production' &&
+      process.env.ENABLE_PSEUDO_EMBEDDING_FALLBACK === 'true',
   },
   search: {
     defaultTopK: parseInt(process.env.DEFAULT_VECTOR_TOP_K || '5', 10),

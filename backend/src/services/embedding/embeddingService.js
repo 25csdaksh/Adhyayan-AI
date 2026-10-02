@@ -18,12 +18,26 @@ function isLiveGeminiConfigured() {
 }
 
 /**
+ * Check if development-only pseudo-embedding fallback is explicitly enabled
+ * Must never be enabled in production
+ * @returns {boolean}
+ */
+function isPseudoFallbackEnabled() {
+  return !config.isProduction && Boolean(config.gemini.enablePseudoEmbeddingFallback);
+}
+
+/**
  * Deterministic pseudo-embedding generator for test/offline environments
- * Generates an L2-normalized 768-dimensional vector based on text content
+ * Only available when ENABLE_PSEUDO_EMBEDDING_FALLBACK=true in development
  * @param {string} text
+ * @param {number} [dimensions=EXPECTED_DIMENSIONS]
  * @returns {number[]}
  */
 function generateDeterministicPseudoEmbedding(text, dimensions = EXPECTED_DIMENSIONS) {
+  if (config.isProduction || !isPseudoFallbackEnabled()) {
+    throw new Error('Pseudo-embedding generation is disabled in this environment.');
+  }
+
   const vector = new Array(dimensions).fill(0);
   if (!text) return vector;
 
@@ -100,11 +114,16 @@ async function generateEmbedding(text) {
 
   const cleanText = text.trim();
 
-  // If live Gemini is not configured, return deterministic pseudo-embedding
+  // If live Gemini is not configured, check if explicit opt-in dev fallback is enabled
   if (!isLiveGeminiConfigured()) {
-    const vector = generateDeterministicPseudoEmbedding(cleanText, EXPECTED_DIMENSIONS);
-    validateEmbeddingVector(vector, EXPECTED_DIMENSIONS);
-    return vector;
+    if (isPseudoFallbackEnabled()) {
+      const vector = generateDeterministicPseudoEmbedding(cleanText, EXPECTED_DIMENSIONS);
+      validateEmbeddingVector(vector, EXPECTED_DIMENSIONS);
+      return vector;
+    }
+    throw new Error(
+      'Google Gemini API key is not configured and pseudo-embedding fallback is disabled.'
+    );
   }
 
   const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
@@ -157,14 +176,19 @@ async function generateEmbeddings(texts, batchSize = 16) {
 
   const results = [];
 
-  // If live Gemini is not configured, process quickly in-memory
+  // If live Gemini is not configured, check if explicit opt-in dev fallback is enabled
   if (!isLiveGeminiConfigured()) {
-    for (const text of texts) {
-      const vector = generateDeterministicPseudoEmbedding(text || '', EXPECTED_DIMENSIONS);
-      validateEmbeddingVector(vector, EXPECTED_DIMENSIONS);
-      results.push(vector);
+    if (isPseudoFallbackEnabled()) {
+      for (const text of texts) {
+        const vector = generateDeterministicPseudoEmbedding(text || '', EXPECTED_DIMENSIONS);
+        validateEmbeddingVector(vector, EXPECTED_DIMENSIONS);
+        results.push(vector);
+      }
+      return results;
     }
-    return results;
+    throw new Error(
+      'Google Gemini API key is not configured and pseudo-embedding fallback is disabled.'
+    );
   }
 
   const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
@@ -217,6 +241,7 @@ module.exports = {
   validateEmbeddingVector,
   generateDeterministicPseudoEmbedding,
   isLiveGeminiConfigured,
+  isPseudoFallbackEnabled,
   EMBEDDING_MODEL,
   EXPECTED_DIMENSIONS,
 };

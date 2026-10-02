@@ -27,7 +27,8 @@
   - Exponential backoff retry handler for transient rate limits (`429` / `503` / `RESOURCE_EXHAUSTED`).
   - Strict vector validation: verifies array structure, numeric completeness, and exact 768-dimension shape.
   - Safe API error masking without exposing sensitive keys or complete raw document contents.
-  - Deterministic normalized pseudo-embedding fallback for offline or headless testing environments without active Gemini credentials.
+  - **No Silent Fallback:** Embedding failure fails the operation safely and transitions documents to `status: 'failed'` (`metadata.embeddingStatus: 'failed'`).
+  - **Optional Development Fallback:** Configurable strictly via `ENABLE_PSEUDO_EMBEDDING_FALLBACK=true` (default: `false`). *Warning: Pseudo-embeddings are strictly prohibited in `NODE_ENV=production` and are not suitable for real semantic search.*
 
 ### Chunk Model Extension (`backend/src/models/Chunk.js`)
 - `embedding`: `[Number]` — 768-dimensional float vector, configured with `select: false` to prevent leaking raw numeric arrays in basic API queries.
@@ -43,9 +44,9 @@ Processing (extract + clean)
    ↓
 Deterministic Chunks Generated
    ↓
-Gemini Embeddings Generated
+Gemini Embeddings Generated & Validated
    ↓
-Chunks + Embeddings Saved Atomically (Idempotent)
+Idempotent Chunk Replacement & Persistence
    ↓
 Document Ready (embeddingStatus: 'completed')
 ```

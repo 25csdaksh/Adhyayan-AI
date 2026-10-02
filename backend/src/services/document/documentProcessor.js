@@ -122,7 +122,7 @@ async function processDocument(documentId, options = {}) {
       finalChunks[i].embeddedAt = embeddedAt;
     }
 
-    // Atomically replace chunks in MongoDB (Idempotency)
+    // Idempotent chunk replacement in MongoDB
     await Chunk.deleteMany({ documentId: document._id });
     await Chunk.insertMany(finalChunks);
 
