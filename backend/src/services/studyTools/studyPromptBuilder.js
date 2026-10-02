@@ -28,22 +28,42 @@ function buildSummaryPrompt({ contextText, mode = 'detailed', topic = '' }) {
 ${contextText}
 
 Task:
-Generate a grounded ${isShort ? 'concise, high-level' : 'comprehensive, structured'} summary of the provided sources${topic ? ` focusing on "${topic}"` : ''}.
+Generate an exhaustive, highly structured, professional study dossier and summary based strictly on the provided sources${topic ? ` focusing on "${topic}"` : ''}.
+
+Synthesize the material with academic depth and professional clarity, structured into executive overview, structured deep-dive sections, key takeaways, conceptual glossaries with contextual importance, and study assessment questions.
 
 Return your response in valid JSON format with this exact structure:
 {
-  "title": "A concise descriptive title for this summary",
-  "overview": "${isShort ? 'A brief 2-3 sentence overview' : 'A thorough overview explaining the core subject matter'}. Use [SOURCE_X] citations.",
+  "title": "A precise, professional title for this summary document",
+  "overview": "${isShort ? 'A comprehensive 3-4 sentence executive overview synthesizing the main themes and scope.' : 'A multi-paragraph, in-depth executive summary synthesizing background, primary themes, core findings, and overall significance.'} Use [SOURCE_X] citations liberally throughout.",
   "keyPoints": [
-    "Key takeaway point 1 [SOURCE_X]",
-    "Key takeaway point 2 [SOURCE_X]"
+    "High-impact takeaway or finding with explanatory context [SOURCE_X]",
+    "Crucial mechanism, methodology, or core takeaway [SOURCE_X]",
+    "Key result, comparison, or operational detail [SOURCE_X]",
+    "Significant implication or takeaway [SOURCE_X]"
+  ],
+  "sections": [
+    {
+      "heading": "Section / Topic Title (e.g. Architectural Foundations, Key Methodologies, Practical Implementations)",
+      "content": "A detailed, thorough analytical explanation of this topic based on the sources. Discuss nuances, mechanisms, and specific details. [SOURCE_X]",
+      "bullets": [
+        "Specific finding, data point, or sub-principle [SOURCE_X]",
+        "Practical rule or operational detail [SOURCE_X]"
+      ]
+    }
   ],
   "concepts": [
     {
       "term": "Concept or Term Name",
-      "definition": "Clear explanation based strictly on the text. [SOURCE_X]"
+      "definition": "Clear, precise academic definition grounded strictly in the text. [SOURCE_X]",
+      "context": "Contextual importance, real-world utility, or role within the topic."
     }
-  ]
+  ],
+  "studyQuestions": [
+    "Thought-provoking review or self-assessment question derived directly from the source material?",
+    "Conceptual question testing understanding of the core mechanisms?"
+  ],
+  "conclusion": "A concise synthesizing concluding statement summarizing the key outcome or value of this material. [SOURCE_X]"
 }`;
 
   return {

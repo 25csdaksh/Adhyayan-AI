@@ -31,25 +31,52 @@ function generateDevSummary(formattedSources, mode, topic) {
 
   const isShort = mode === 'short';
   return {
-    title: topic ? `Summary: ${topic}` : `Summary of ${docTitle}`,
+    title: topic ? `Executive Study Summary: ${topic}` : `Executive Study Summary: ${docTitle}`,
     overview: isShort
-      ? `A concise overview of ${docTitle} [SOURCE_1], summarizing key foundational principles.`
-      : `This comprehensive summary reviews the core concepts in ${docTitle} [SOURCE_1] and related topics [SOURCE_2]. It synthesizes the main arguments and experimental or theoretical frameworks presented in the materials.`,
+      ? `A concise executive overview of ${docTitle} [SOURCE_1], highlighting key foundational principles and practical paradigms.`
+      : `This comprehensive executive summary reviews the core mechanisms, architectures, and theoretical foundations articulated in ${docTitle} [SOURCE_1] and related materials [SOURCE_2]. It synthesizes the main arguments, experimental findings, and implementation frameworks into an actionable study dossier.`,
     keyPoints: [
-      `Core concept introduction and fundamental terminology [SOURCE_1]`,
-      `Practical applications and architectural mechanisms [SOURCE_1]`,
-      `Key relationships and analytical conclusions [SOURCE_2]`,
+      `Foundational principles and domain architecture outlined in ${docTitle} [SOURCE_1]`,
+      `Critical operational mechanisms, workflows, and core methodologies [SOURCE_1]`,
+      `Analytical findings, comparative metrics, and performance characteristics [SOURCE_2]`,
+      `Key practical applications and systemic takeaways for continuous learning [SOURCE_1]`,
+    ],
+    sections: [
+      {
+        heading: `Foundations & Core Scope [SOURCE_1]`,
+        content: `The primary source material establishes fundamental definitions and standard operating principles. It sets up baseline terminology and domain concepts necessary for deep comprehension [SOURCE_1].`,
+        bullets: [
+          `Establishes conceptual boundaries and standard nomenclature [SOURCE_1]`,
+          `Outlines baseline prerequisites and foundational theory [SOURCE_1]`,
+        ],
+      },
+      {
+        heading: `Mechanisms & Key Implementation [SOURCE_2]`,
+        content: `Detailed structural patterns and implementation procedures are analyzed, emphasizing reliability, efficiency, and verifiable outcomes [SOURCE_2].`,
+        bullets: [
+          `Step-by-step operational workflow and execution criteria [SOURCE_2]`,
+          `Edge case considerations and validation guardrails [SOURCE_1]`,
+        ],
+      },
     ],
     concepts: [
       {
-        term: 'Primary Concept',
-        definition: `Fundamental concept described in ${docTitle} [SOURCE_1].`,
+        term: 'Primary Architecture Concept',
+        definition: `Fundamental framework and operational methodology defined in ${docTitle} [SOURCE_1].`,
+        context: 'Serves as the cornerstone principle for understanding downstream topics.',
       },
       {
-        term: 'Secondary Principle',
-        definition: `Supporting principle detailed in the materials [SOURCE_2].`,
+        term: 'Core Operational Principle',
+        definition: `Supporting algorithmic or procedural guideline detailed in the materials [SOURCE_2].`,
+        context: 'Enables deterministic execution and structured analysis.',
       },
     ],
+    studyQuestions: [
+      `What are the core foundational mechanisms described in ${docTitle}?`,
+      `How do the primary workflows compare against standard alternatives in this domain?`,
+      `What key prerequisites or constraints are highlighted in the source material?`,
+    ],
+    conclusion: `The source material provides a rigorous foundation in ${docTitle}, enabling comprehensive understanding and practical application of the core principles. [SOURCE_1]`,
   };
 }
 
@@ -211,11 +238,14 @@ async function generateSummary({ notebookId, userId, mode = 'detailed', topic = 
     summaryData = generateDevSummary(formattedSources, validMode, cleanTopic);
   }
 
-  // Process and resolve citations in overview, keyPoints, and concepts
+  // Process and resolve citations across all rich summary fields
   const allTextForCitations = [
     summaryData.overview,
     ...(summaryData.keyPoints || []),
-    ...(summaryData.concepts || []).map((c) => `${c.term}: ${c.definition}`),
+    ...(summaryData.sections || []).flatMap((s) => [s.heading, s.content, ...(s.bullets || [])]),
+    ...(summaryData.concepts || []).map((c) => `${c.term}: ${c.definition} ${c.context || ''}`),
+    ...(summaryData.studyQuestions || []),
+    summaryData.conclusion || '',
   ].join('\n');
 
   const { citations } = processCitations(allTextForCitations, sourceMap);
@@ -225,16 +255,31 @@ async function generateSummary({ notebookId, userId, mode = 'detailed', topic = 
   const cleanKeyPoints = (summaryData.keyPoints || []).map(
     (kp) => processCitations(kp, sourceMap).cleanAnswer
   );
+  const cleanSections = (summaryData.sections || []).map((sec) => ({
+    heading: processCitations(sec.heading, sourceMap).cleanAnswer,
+    content: processCitations(sec.content, sourceMap).cleanAnswer,
+    bullets: (sec.bullets || []).map((b) => processCitations(b, sourceMap).cleanAnswer),
+  }));
   const cleanConcepts = (summaryData.concepts || []).map((c) => ({
     term: c.term,
     definition: processCitations(c.definition, sourceMap).cleanAnswer,
+    context: c.context ? processCitations(c.context, sourceMap).cleanAnswer : '',
   }));
+  const cleanStudyQuestions = (summaryData.studyQuestions || []).map(
+    (q) => processCitations(q, sourceMap).cleanAnswer
+  );
+  const cleanConclusion = summaryData.conclusion
+    ? processCitations(summaryData.conclusion, sourceMap).cleanAnswer
+    : '';
 
   const finalResult = {
     title: summaryData.title,
     overview: cleanOverview,
     keyPoints: cleanKeyPoints,
+    sections: cleanSections,
     concepts: cleanConcepts,
+    studyQuestions: cleanStudyQuestions,
+    conclusion: cleanConclusion,
     mode: validMode,
   };
 

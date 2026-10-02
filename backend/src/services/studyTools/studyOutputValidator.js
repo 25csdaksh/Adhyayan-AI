@@ -44,7 +44,7 @@ function safeJsonParse(rawText) {
 /**
  * Validate and sanitize summary output
  * @param {any} rawOutput
- * @returns {{ title: string, overview: string, keyPoints: string[], concepts: Array<{ term: string, definition: string }>, rawText: string }}
+ * @returns {{ title: string, overview: string, keyPoints: string[], sections: Array<{ heading: string, content: string, bullets: string[] }>, concepts: Array<{ term: string, definition: string, context?: string }>, studyQuestions: string[], conclusion: string, rawText: string }}
  */
 function validateSummaryOutput(rawOutput) {
   if (typeof rawOutput === 'string') {
@@ -53,45 +53,73 @@ function validateSummaryOutput(rawOutput) {
       return validateSummaryOutput(parsed);
     }
     return {
-      title: 'Notebook Summary',
+      title: 'Executive Study Summary',
       overview: rawOutput.trim(),
       keyPoints: [],
+      sections: [],
       concepts: [],
+      studyQuestions: [],
+      conclusion: '',
       rawText: rawOutput.trim(),
     };
   }
 
   if (typeof rawOutput !== 'object' || rawOutput === null) {
     return {
-      title: 'Notebook Summary',
+      title: 'Executive Study Summary',
       overview: '',
       keyPoints: [],
+      sections: [],
       concepts: [],
+      studyQuestions: [],
+      conclusion: '',
       rawText: '',
     };
   }
 
-  const title = typeof rawOutput.title === 'string' && rawOutput.title.trim() ? rawOutput.title.trim() : 'Notebook Summary';
+  const title = typeof rawOutput.title === 'string' && rawOutput.title.trim() ? rawOutput.title.trim() : 'Executive Study Summary';
   const overview = typeof rawOutput.overview === 'string' ? rawOutput.overview.trim() : (typeof rawOutput.summary === 'string' ? rawOutput.summary.trim() : '');
   
   const keyPoints = Array.isArray(rawOutput.keyPoints)
     ? rawOutput.keyPoints.filter((kp) => typeof kp === 'string' && kp.trim().length > 0).map((kp) => kp.trim())
+    : (Array.isArray(rawOutput.keyTakeaways) ? rawOutput.keyTakeaways.filter((kp) => typeof kp === 'string' && kp.trim().length > 0).map((kp) => kp.trim()) : []);
+
+  const sections = Array.isArray(rawOutput.sections)
+    ? rawOutput.sections
+        .filter((s) => s && typeof s === 'object' && typeof (s.heading || s.title) === 'string')
+        .map((s) => ({
+          heading: (s.heading || s.title || 'Topic Section').trim(),
+          content: typeof (s.content || s.text || s.description) === 'string' ? (s.content || s.text || s.description).trim() : '',
+          bullets: Array.isArray(s.bullets || s.points)
+            ? (s.bullets || s.points).filter((b) => typeof b === 'string' && b.trim().length > 0).map((b) => b.trim())
+            : [],
+        }))
     : [];
 
   const concepts = Array.isArray(rawOutput.concepts)
     ? rawOutput.concepts
-        .filter((c) => c && typeof c === 'object' && typeof c.term === 'string' && c.term.trim())
+        .filter((c) => c && typeof c === 'object' && typeof (c.term || c.name) === 'string' && (c.term || c.name).trim())
         .map((c) => ({
-          term: c.term.trim(),
-          definition: typeof c.definition === 'string' ? c.definition.trim() : '',
+          term: (c.term || c.name).trim(),
+          definition: typeof (c.definition || c.description) === 'string' ? (c.definition || c.description).trim() : '',
+          context: typeof c.context === 'string' ? c.context.trim() : (typeof c.significance === 'string' ? c.significance.trim() : ''),
         }))
     : [];
+
+  const studyQuestions = Array.isArray(rawOutput.studyQuestions)
+    ? rawOutput.studyQuestions.filter((q) => typeof q === 'string' && q.trim().length > 0).map((q) => q.trim())
+    : (Array.isArray(rawOutput.questions) ? rawOutput.questions.filter((q) => typeof q === 'string' && q.trim().length > 0).map((q) => q.trim()) : []);
+
+  const conclusion = typeof rawOutput.conclusion === 'string' ? rawOutput.conclusion.trim() : '';
 
   return {
     title,
     overview,
     keyPoints,
+    sections,
     concepts,
+    studyQuestions,
+    conclusion,
     rawText: overview,
   };
 }
