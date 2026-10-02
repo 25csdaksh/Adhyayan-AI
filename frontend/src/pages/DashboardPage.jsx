@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   Plus,
@@ -6,83 +6,126 @@ import {
   BookOpen,
   Sparkles,
   Clock,
-  Star,
-  Layers,
   FolderPlus,
-  ArrowRight,
-  Filter,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Tabs } from '../components/ui/Tabs';
 import { EmptyState } from '../components/ui/EmptyState';
+import { CardSkeleton } from '../components/ui/Skeleton';
 import { NotebookCard } from '../components/notebooks/NotebookCard';
-import { MOCK_NOTEBOOKS } from '../mock/mockData';
+import { CreateNotebookModal } from '../components/notebooks/CreateNotebookModal';
+import { EditNotebookModal } from '../components/notebooks/EditNotebookModal';
+import { DeleteNotebookModal } from '../components/notebooks/DeleteNotebookModal';
+import { notebookService } from '../api/notebookService';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 
 export const DashboardPage = () => {
-  const { openCreateNotebook } = useOutletContext() || {};
   const [searchParams] = useSearchParams();
-  const urlQuery = searchParams.get('q') || '';
+  const initialQuery = searchParams.get('q') || '';
   const { user } = useAuth();
-
-  const [notebooks, setNotebooks] = useState(MOCK_NOTEBOOKS);
-  const [searchQuery, setSearchQuery] = useState(urlQuery);
-  const [activeCategory, setActiveCategory] = useState('all');
   const toast = useToast();
+
+  const [notebooks, setNotebooks] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 1 });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+
+  // Modals state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const [editingNotebook, setEditingNotebook] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const [deletingNotebook, setDeletingNotebook] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const displayName = user?.name ? user.name.split(' ')[0] : 'Researcher';
 
-  const handleToggleFavorite = (id) => {
-    setNotebooks((prev) =>
-      prev.map((nb) =>
-        nb.id === id ? { ...nb, isFavorite: !nb.isFavorite } : nb
-      )
-    );
-    const target = notebooks.find((n) => n.id === id);
-    if (target) {
-      toast.info(
-        target.isFavorite ? `Removed "${target.title}" from favorites` : `Starred "${target.title}"`,
-        'Favorites'
-      );
+  // Fetch notebooks with search and pagination
+  const fetchNotebooks = useCallback(async (search = '', page = 1) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await notebookService.getNotebooks({ search, page, limit: 24 });
+      setNotebooks(response.data.notebooks || []);
+      if (response.data.pagination) {
+        setPagination(response.data.pagination);
+      }
+    } catch (err) {
+      setError(err.message || 'Unable to load notebooks. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchNotebooks(searchQuery, 1);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, fetchNotebooks]);
+
+  // Create Notebook Handler
+  const handleCreateNotebook = async (data) => {
+    setIsCreating(true);
+    try {
+      const res = await notebookService.createNotebook(data);
+      const newNb = res.data.notebook;
+      setNotebooks((prev) => [newNb, ...prev]);
+      setPagination((prev) => ({ ...prev, total: prev.total + 1 }));
+      toast.success(`Notebook "${newNb.title}" created successfully!`, 'Notebook Created');
+      setCreateModalOpen(false);
+    } catch (err) {
+      toast.error(err.message || 'Failed to create notebook.');
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  const handleDeleteNotebook = (id) => {
-    const target = notebooks.find((n) => n.id === id);
-    setNotebooks((prev) => prev.filter((nb) => nb.id !== id));
-    toast.success(`Deleted notebook "${target?.title || ''}"`, 'Deleted');
+  // Edit Notebook Handler
+  const handleUpdateNotebook = async (updates) => {
+    if (!editingNotebook) return;
+    setIsUpdating(true);
+    try {
+      const id = editingNotebook._id || editingNotebook.id;
+      const res = await notebookService.updateNotebook(id, updates);
+      const updatedNb = res.data.notebook;
+      setNotebooks((prev) =>
+        prev.map((nb) => ((nb._id || nb.id) === id ? updatedNb : nb))
+      );
+      toast.success(`Notebook "${updatedNb.title}" updated.`, 'Saved');
+      setEditingNotebook(null);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update notebook.');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
-  const categories = [
-    { id: 'all', label: 'All Notebooks', badge: notebooks.length },
-    { id: 'favorites', label: 'Favorites', icon: Star, badge: notebooks.filter((n) => n.isFavorite).length },
-    { id: 'Core CS', label: 'Core CS' },
-    { id: 'Systems', label: 'Systems' },
-    { id: 'Algorithms', label: 'Algorithms' },
-    { id: 'AI / ML', label: 'AI / ML' },
-  ];
-
-  const filteredNotebooks = useMemo(() => {
-    return notebooks.filter((nb) => {
-      const matchesSearch =
-        nb.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        nb.description.toLowerCase().includes(searchQuery.toLowerCase());
-
-      if (activeCategory === 'favorites') {
-        return matchesSearch && nb.isFavorite;
-      }
-      if (activeCategory !== 'all') {
-        return matchesSearch && nb.category === activeCategory;
-      }
-      return matchesSearch;
-    });
-  }, [notebooks, searchQuery, activeCategory]);
-
-  const recentNotebooks = useMemo(() => {
-    return notebooks.slice(0, 3);
-  }, [notebooks]);
+  // Delete Notebook Handler
+  const handleDeleteNotebook = async () => {
+    if (!deletingNotebook) return;
+    setIsDeleting(true);
+    try {
+      const id = deletingNotebook._id || deletingNotebook.id;
+      await notebookService.deleteNotebook(id);
+      setNotebooks((prev) => prev.filter((nb) => (nb._id || nb.id) !== id));
+      setPagination((prev) => ({ ...prev, total: Math.max(0, prev.total - 1) }));
+      toast.success(`Notebook "${deletingNotebook.title}" deleted.`, 'Deleted');
+      setDeletingNotebook(null);
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete notebook.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-150">
@@ -106,7 +149,7 @@ export const DashboardPage = () => {
             variant="primary"
             size="md"
             leftIcon={Plus}
-            onClick={openCreateNotebook}
+            onClick={() => setCreateModalOpen(true)}
             className="shadow-sm"
           >
             New Notebook
@@ -118,56 +161,35 @@ export const DashboardPage = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1">
           <span className="text-xs font-medium text-[#6B756F]">Active Notebooks</span>
-          <p className="text-xl sm:text-2xl font-bold text-[#17211D]">{notebooks.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#17211D]">
+            {isLoading ? '...' : pagination.total}
+          </p>
         </div>
         <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1">
           <span className="text-xs font-medium text-[#6B756F]">Indexed Sources</span>
-          <p className="text-xl sm:text-2xl font-bold text-[#17211D]">28 documents</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#17211D]">0 documents</p>
         </div>
         <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1">
-          <span className="text-xs font-medium text-[#6B756F]">AI Q&amp;A Inquiries</span>
-          <p className="text-xl sm:text-2xl font-bold text-[#17211D]">142 queries</p>
+          <span className="text-xs font-medium text-[#6B756F]">Grounding Status</span>
+          <p className="text-xl sm:text-2xl font-bold text-[#1F5E4B]">Zero Hallucination</p>
         </div>
         <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1">
-          <span className="text-xs font-medium text-[#6B756F]">Storage Quota</span>
-          <p className="text-xl sm:text-2xl font-bold text-[#1F5E4B]">84 MB <span className="text-xs font-normal text-[#8E9993]">/ 500 MB</span></p>
+          <span className="text-xs font-medium text-[#6B756F]">Storage Limit</span>
+          <p className="text-xl sm:text-2xl font-bold text-[#17211D]">500 MB <span className="text-xs font-normal text-[#8E9993]">quota</span></p>
         </div>
       </div>
 
-      {/* Section 1: Recent Notebooks (if no search query) */}
-      {!searchQuery && activeCategory === 'all' && (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base sm:text-lg font-bold text-[#17211D] flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#1F5E4B]" />
-              Recently Opened
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-            {recentNotebooks.map((nb) => (
-              <NotebookCard
-                key={nb.id}
-                notebook={nb}
-                onToggleFavorite={handleToggleFavorite}
-                onDelete={handleDeleteNotebook}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Section 2: All Notebooks with Search & Filters */}
+      {/* Main Section: Search and Notebooks */}
       <section className="space-y-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h2 className="text-base sm:text-lg font-bold text-[#17211D] flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-[#1F5E4B]" />
-            All Notebooks
+            My Notebooks ({pagination.total})
           </h2>
 
           <div className="w-full md:w-72">
             <Input
-              placeholder="Filter notebooks..."
+              placeholder="Search notebooks..."
               leftIcon={Search}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -176,40 +198,75 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Category Filter Tabs */}
-        <Tabs
-          tabs={categories}
-          activeTab={activeCategory}
-          onChange={setActiveCategory}
-          variant="underline"
-        />
-
-        {/* Notebooks Grid */}
-        {filteredNotebooks.length > 0 ? (
+        {/* Content Display: Loading, Error, or Notebook Grid */}
+        {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {filteredNotebooks.map((nb) => (
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
+        ) : error ? (
+          <div className="p-6 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-center space-y-3 max-w-lg mx-auto">
+            <AlertCircle className="w-6 h-6 text-rose-600 mx-auto" />
+            <p className="font-semibold text-sm">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={RefreshCw}
+              onClick={() => fetchNotebooks(searchQuery, 1)}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : notebooks.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {notebooks.map((nb) => (
               <NotebookCard
-                key={nb.id}
+                key={nb._id || nb.id}
                 notebook={nb}
-                onToggleFavorite={handleToggleFavorite}
-                onDelete={handleDeleteNotebook}
+                onEdit={(target) => setEditingNotebook(target)}
+                onDelete={(target) => setDeletingNotebook(target)}
               />
             ))}
           </div>
         ) : (
           <EmptyState
             icon={FolderPlus}
-            title={searchQuery ? 'No matching notebooks found' : 'No notebooks in this category'}
+            title={searchQuery ? 'No matching notebooks found' : 'No notebooks yet'}
             description={
               searchQuery
-                ? `No notebooks match "${searchQuery}". Try a different keyword or clear your filter.`
-                : 'Create a new study notebook to organize your research sources and start asking questions.'
+                ? `No notebooks match "${searchQuery}". Try a different search term or clear the filter.`
+                : 'Create your first notebook to organize your study materials, research papers, and AI-powered learning workspace.'
             }
-            actionLabel={searchQuery ? 'Clear Search' : '+ New Notebook'}
-            onAction={searchQuery ? () => setSearchQuery('') : openCreateNotebook}
+            actionLabel={searchQuery ? 'Clear Search' : '+ Create Notebook'}
+            onAction={searchQuery ? () => setSearchQuery('') : () => setCreateModalOpen(true)}
           />
         )}
       </section>
+
+      {/* Modals */}
+      <CreateNotebookModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onCreate={handleCreateNotebook}
+        isCreating={isCreating}
+      />
+
+      <EditNotebookModal
+        isOpen={Boolean(editingNotebook)}
+        onClose={() => setEditingNotebook(null)}
+        onUpdate={handleUpdateNotebook}
+        notebook={editingNotebook}
+        isUpdating={isUpdating}
+      />
+
+      <DeleteNotebookModal
+        isOpen={Boolean(deletingNotebook)}
+        onClose={() => setDeletingNotebook(null)}
+        onConfirm={handleDeleteNotebook}
+        notebookTitle={deletingNotebook?.title || ''}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 };

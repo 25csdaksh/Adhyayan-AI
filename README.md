@@ -4,13 +4,42 @@
 
 ---
 
-## 📌 Status: Phase 03 Completed (Authentication & User System)
+## 📌 Status: Phase 04 Completed (Notebook Management)
 
 - **Phase 01:** Foundation, Monorepo, Express Backend, MongoDB, CORS, `/api/health` *(Verified)*
 - **Phase 02:** Light-First Academic UI/UX, Design System, Landing Page, Dashboard, 3-Panel Workspace, Chat UI, Source Management, Settings, Profile *(Verified)*
 - **Phase 03:** Secure JWT & Bcrypt Authentication, User Registration, Login, Protected Routes, Session Management & Profile Update *(Verified)*
-- **Phase 04:** Notebooks CRUD & Multi-Format Document Ingestion *(Upcoming)*
-- **Phase 05:** Vector Search & Gemini RAG *(Upcoming)*
+- **Phase 04:** Authenticated Notebooks CRUD, Strict User Isolation, Search & Pagination *(Verified)*
+- **Phase 05:** Vector Search & Multi-Format Document Grounding *(Upcoming)*
+
+---
+
+## 📚 Notebook Management (Phase 04)
+
+### Data Model & Indexing
+- **Mongoose Schema (`backend/src/models/Notebook.js`):**
+  - `ownerId`: ObjectId referencing `User`, indexed, required.
+  - `title`: String (1–120 characters), trimmed, required.
+  - `description`: String (up to 500 characters), trimmed.
+  - `icon`: String (default `"book"`).
+  - Timestamps: automatic `createdAt` and `updatedAt`.
+- **Compound Indexes:**
+  - `{ ownerId: 1, updatedAt: -1 }` for high-performance scoped and sorted queries.
+
+### Security & Ownership Isolation
+- All notebook queries strictly enforce `{ _id: id, ownerId: req.user._id }`.
+- Cross-user operations (viewing, updating, deleting) return a clean `404 Not Found` without disclosing existence of other users' notebook IDs.
+- Ownership assignment (`ownerId = req.user._id`) is strictly managed on the backend; client-supplied `ownerId` is discarded.
+
+### Notebook API Endpoints
+
+| Method | Endpoint | Protection | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/notebooks` | Bearer Token | Create a new notebook with `ownerId = req.user._id` (201) |
+| `GET` | `/api/notebooks` | Bearer Token | Fetch user's notebooks with `?page=1&limit=12&search=query` (200) |
+| `GET` | `/api/notebooks/:id` | Bearer Token | Fetch single notebook by ID scoped to authenticated user (200) |
+| `PATCH`| `/api/notebooks/:id` | Bearer Token | Update title, description, or icon with validation (200) |
+| `DELETE`| `/api/notebooks/:id` | Bearer Token | Delete user's notebook with confirmation (200) |
 
 ---
 

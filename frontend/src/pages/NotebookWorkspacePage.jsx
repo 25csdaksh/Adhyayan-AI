@@ -33,18 +33,19 @@ import { ChatMessage } from '../components/chat/ChatMessage';
 import { ChatInput } from '../components/chat/ChatInput';
 import { StudyToolsPanel } from '../components/study/StudyToolsPanel';
 import { MOCK_NOTEBOOKS, MOCK_CHAT_CONVERSATION } from '../mock/mockData';
+import { notebookService } from '../api/notebookService';
 import { useToast } from '../context/ToastContext';
+import { EmptyState } from '../components/ui/EmptyState';
 
 export const NotebookWorkspacePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
 
-  // Find notebook from mock data or fallback
-  const initialNotebook = MOCK_NOTEBOOKS.find((n) => n.id === id) || MOCK_NOTEBOOKS[0];
-
-  const [notebook, setNotebook] = useState(initialNotebook);
-  const [sources, setSources] = useState(initialNotebook.sources || []);
+  const [notebook, setNotebook] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [sources, setSources] = useState([]);
   const [messages, setMessages] = useState(MOCK_CHAT_CONVERSATION);
   const [addSourceOpen, setAddSourceOpen] = useState(false);
   const [selectedSourceSnippet, setSelectedSourceSnippet] = useState(null);
@@ -55,6 +56,38 @@ export const NotebookWorkspacePage = () => {
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
 
   const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchNotebook = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await notebookService.getNotebook(id);
+        if (isMounted) {
+          if (response?.data?.notebook) {
+            setNotebook(response.data.notebook);
+          } else {
+            setError('Notebook not found or you do not have permission to view it.');
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          const errMsg = err?.response?.data?.message || 'Failed to load notebook. Please try again.';
+          setError(errMsg);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchNotebook();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -111,6 +144,48 @@ export const NotebookWorkspacePage = () => {
     toast.info('Conversation history cleared', 'Workspace Reset');
   };
 
+  if (loading) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-4rem)] -m-4 sm:-m-6 lg:-m-8 bg-[#F7F8F6] items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-[#E2E7E3] p-8 text-center space-y-4 shadow-sm">
+          <div className="w-12 h-12 rounded-full border-3 border-[#1F5E4B] border-t-transparent animate-spin mx-auto" />
+          <div>
+            <h2 className="text-base font-bold text-[#17211D]">Loading Workspace...</h2>
+            <p className="text-xs text-[#6B756F] mt-1">Retrieving your notebook and study environment</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !notebook) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-4rem)] -m-4 sm:-m-6 lg:-m-8 bg-[#F7F8F6] items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-[#E2E7E3] p-8 text-center space-y-5 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-[#FDEDEC] text-[#D32F2F] flex items-center justify-center mx-auto">
+            <AlertCircle className="w-7 h-7" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-[#17211D]">Notebook Not Found</h2>
+            <p className="text-xs text-[#6B756F] mt-1.5 leading-relaxed">
+              {error || 'This notebook does not exist or you do not have permission to access it.'}
+            </p>
+          </div>
+          <div className="flex justify-center gap-3 pt-2">
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={ArrowLeft}
+              onClick={() => navigate('/dashboard')}
+            >
+              Back to Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] -m-4 sm:-m-6 lg:-m-8 bg-[#F7F8F6] overflow-hidden">
       {/* Workspace Sub-Header */}
@@ -134,7 +209,7 @@ export const NotebookWorkspacePage = () => {
               </Badge>
             </div>
             <p className="text-[11px] text-[#6B756F] truncate hidden sm:block">
-              {notebook.description}
+              {notebook.description || 'No description provided'}
             </p>
           </div>
         </div>
@@ -257,15 +332,22 @@ export const NotebookWorkspacePage = () => {
                 />
               ))
             ) : (
-              <div className="text-center py-10 px-4 text-xs text-[#6B756F] space-y-3">
-                <p>No sources uploaded yet.</p>
+              <div className="text-center py-12 px-4 text-xs text-[#6B756F] space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-[#E8F2EE] text-[#1F5E4B] flex items-center justify-center mx-auto mb-2">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <p className="font-semibold text-sm text-[#17211D]">No sources yet</p>
+                <p className="text-xs text-[#6B756F] leading-relaxed max-w-xs mx-auto">
+                  Add your first source to start building this notebook.
+                </p>
                 <Button
                   variant="primary"
                   size="sm"
                   leftIcon={Plus}
+                  className="mt-2"
                   onClick={() => setAddSourceOpen(true)}
                 >
-                  Add First Source
+                  Add Source
                 </Button>
               </div>
             )}

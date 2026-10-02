@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
@@ -11,19 +11,29 @@ import {
   Sparkles,
   Cpu,
   Sigma,
-  FolderPlus,
+  Save,
 } from 'lucide-react';
 
-export const CreateNotebookModal = ({
+export const EditNotebookModal = ({
   isOpen,
   onClose,
-  onCreate,
-  isCreating = false,
+  onUpdate,
+  notebook,
+  isUpdating = false,
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('BookOpen');
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (notebook && isOpen) {
+      setTitle(notebook.title || '');
+      setDescription(notebook.description || '');
+      setSelectedIcon(notebook.icon || 'BookOpen');
+      setErrors({});
+    }
+  }, [notebook, isOpen]);
 
   const icons = [
     { id: 'BookOpen', icon: BookOpen, label: 'Book' },
@@ -38,44 +48,36 @@ export const CreateNotebookModal = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      setErrors({ title: 'Please enter a notebook name' });
+      setErrors({ title: 'Please enter a notebook title.' });
       return;
     }
 
-    onCreate({
+    onUpdate({
       title: title.trim(),
       description: description.trim(),
       icon: selectedIcon,
     });
   };
 
-  const handleReset = () => {
-    setTitle('');
-    setDescription('');
-    setSelectedIcon('BookOpen');
-    setErrors({});
-    onClose();
-  };
-
   return (
     <Modal
       isOpen={isOpen}
-      onClose={handleReset}
-      title="Create New Notebook"
-      description="Set up an intelligent workspace to organize your research sources, notes, and AI queries."
+      onClose={onClose}
+      title="Edit Notebook"
+      description="Update the name, description, or icon for this study notebook."
       maxWidth="max-w-lg"
       footer={
         <>
-          <Button variant="outline" onClick={handleReset} disabled={isCreating}>
+          <Button variant="outline" onClick={onClose} disabled={isUpdating}>
             Cancel
           </Button>
           <Button
             variant="primary"
             onClick={handleSubmit}
-            isLoading={isCreating}
-            leftIcon={FolderPlus}
+            isLoading={isUpdating}
+            leftIcon={Save}
           >
-            Create Notebook
+            Save Changes
           </Button>
         </>
       }
@@ -83,7 +85,7 @@ export const CreateNotebookModal = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Notebook Title *"
-          placeholder="e.g. Distributed Systems & Consensus Protocols"
+          placeholder="e.g. Distributed Systems & Concurrency"
           value={title}
           onChange={(e) => {
             setTitle(e.target.value);
@@ -95,7 +97,7 @@ export const CreateNotebookModal = ({
 
         <Textarea
           label="Description (Optional)"
-          placeholder="What topic, course, or research subject will this notebook cover?"
+          placeholder="Summary of course subjects or research topics..."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}

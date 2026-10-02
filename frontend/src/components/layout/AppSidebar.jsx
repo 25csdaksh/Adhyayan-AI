@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
-import { MOCK_NOTEBOOKS } from '../../mock/mockData';
+import { notebookService } from '../../api/notebookService';
 import { useAuth } from '../../context/AuthContext';
 
 export const AppSidebar = ({
@@ -22,13 +22,35 @@ export const AppSidebar = ({
   onOpenCreateNotebook,
 }) => {
   const { user } = useAuth();
+  const [recentNotebooks, setRecentNotebooks] = useState([]);
+
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'My Notebooks', path: '/dashboard?tab=all', icon: BookOpen },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
-  const recentNotebooks = MOCK_NOTEBOOKS.slice(0, 4);
+  useEffect(() => {
+    let isMounted = true;
+    if (user) {
+      notebookService
+        .getNotebooks({ limit: 4 })
+        .then((res) => {
+          if (isMounted && res?.data?.notebooks) {
+            setRecentNotebooks(res.data.notebooks);
+          }
+        })
+        .catch(() => {
+          // ignore or keep empty
+        });
+    } else {
+      setRecentNotebooks([]);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
   const displayName = user?.name || 'Researcher';
   const displayEmail = user?.email || '';
 
@@ -106,20 +128,23 @@ export const AppSidebar = ({
             <span>Recent Workspaces</span>
             <Clock className="w-3 h-3 text-[#8E9993]" />
           </p>
-          {recentNotebooks.map((nb) => (
-            <Link
-              key={nb.id}
-              to={`/notebooks/${nb.id}`}
-              onClick={onCloseMobile}
-              className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs text-[#6B756F] hover:bg-[#F2F5F3] hover:text-[#17211D] transition-colors truncate group"
-            >
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: nb.color || '#1F5E4B' }}
-              />
-              <span className="truncate group-hover:text-[#1F5E4B]">{nb.title}</span>
-            </Link>
-          ))}
+          {recentNotebooks.length > 0 ? (
+            recentNotebooks.map((nb) => (
+              <Link
+                key={nb._id || nb.id}
+                to={`/notebooks/${nb._id || nb.id}`}
+                onClick={onCloseMobile}
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs text-[#6B756F] hover:bg-[#F2F5F3] hover:text-[#17211D] transition-colors truncate group"
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0 bg-[#1F5E4B]"
+                />
+                <span className="truncate group-hover:text-[#1F5E4B]">{nb.title}</span>
+              </Link>
+            ))
+          ) : (
+            <p className="px-3 py-1 text-[11px] text-[#8E9993] italic">No workspaces yet</p>
+          )}
         </div>
       </div>
 
