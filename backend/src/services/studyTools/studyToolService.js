@@ -159,28 +159,99 @@ function generateDevMindMap(formattedSources, topic) {
 }
 
 /**
+ * Determine if a Gemini API error is a temporary retryable failure
+ * @param {any} err
+ * @returns {boolean}
+ */
+function isRetryableGeminiError(err) {
+  if (!err) return false;
+  const status = err.status || err.statusCode;
+  // Non-retryable authentication or bad request errors
+  if (status === 400 || status === 401 || status === 403 || status === 404) {
+    return false;
+  }
+  const msg = (err.message || '').toLowerCase();
+  if (
+    msg.includes('503') ||
+    msg.includes('429') ||
+    msg.includes('resource_exhausted') ||
+    msg.includes('high demand') ||
+    msg.includes('temporarily unavailable') ||
+    msg.includes('service unavailable') ||
+    msg.includes('fetch failed') ||
+    msg.includes('overloaded') ||
+    msg.includes('econnreset') ||
+    msg.includes('etimedout')
+  ) {
+    return true;
+  }
+  return status === 503 || status === 429 || status === 500;
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Execute Gemini generation with bounded exponential backoff retries
+ */
+async function executeGeminiWithRetry(genAI, modelName, systemInstruction, userPrompt, maxRetries = 2) {
+  let lastError = null;
+  const instructionText = typeof systemInstruction === 'string'
+    ? systemInstruction
+    : (systemInstruction?.parts?.[0]?.text || '');
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        systemInstruction: instructionText,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.2,
+        },
+      });
+
+      const result = await model.generateContent(userPrompt);
+      const response = await result.response;
+      return {
+        text: response.text(),
+        model: modelName,
+      };
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries && isRetryableGeminiError(err)) {
+        const backoffMs = Math.min(2500, 400 * Math.pow(2, attempt) + Math.random() * 100);
+        console.warn(`[Gemini Retry] Model ${modelName} temporary error (attempt ${attempt + 1}/${maxRetries + 1}): ${err.message}. Retrying in ${Math.round(backoffMs)}ms...`);
+        await sleep(backoffMs);
+        continue;
+      }
+      break;
+    }
+  }
+  throw lastError;
+}
+
+/**
  * Call Gemini Generative AI or fallback cleanly
  */
 async function callGeminiForStudyTool(systemInstruction, userPrompt) {
-  const modelName = config.gemini?.chatModel || 'gemini-1.5-flash';
+  const modelName = config.gemini?.chatModel || 'gemini-2.5-flash';
+  const fallbackModel = config.gemini?.fallbackChatModel || '';
 
   if (isLiveGeminiConfigured()) {
     const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-    const model = genAI.getGenerativeModel({
-      model: modelName,
-      systemInstruction: { parts: [{ text: systemInstruction }] },
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.2,
-      },
-    });
-
-    const result = await model.generateContent(userPrompt);
-    const response = await result.response;
-    return {
-      text: response.text(),
-      model: modelName,
-    };
+    try {
+      return await executeGeminiWithRetry(genAI, modelName, systemInstruction, userPrompt, 2);
+    } catch (primaryErr) {
+      if (fallbackModel && fallbackModel !== modelName) {
+        console.warn(`[Gemini Fallback] Primary model ${modelName} failed. Attempting configured fallback ${fallbackModel}...`);
+        try {
+          return await executeGeminiWithRetry(genAI, fallbackModel, systemInstruction, userPrompt, 2);
+        } catch (fallbackErr) {
+          throw new Error(`Gemini study tool generation failed with primary and fallback models: ${primaryErr.message}; ${fallbackErr.message}`);
+        }
+      }
+      throw new Error(`Gemini study tool generation failed: ${primaryErr.message}`);
+    }
   }
 
   if (isPseudoFallbackEnabled()) {
