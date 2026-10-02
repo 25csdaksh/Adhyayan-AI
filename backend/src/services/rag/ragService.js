@@ -9,6 +9,60 @@ const { processCitations } = require('./citationService');
 const INSUFFICIENT_INFO_RESPONSE =
   "I couldn't find enough information about this in your notebook sources. Try asking about a topic covered in your uploaded materials.";
 
+const SUMMARY_INTENTS = [
+  'summary',
+  'summarize',
+  'summarise',
+  'overview',
+  'key points',
+  'main points',
+  'core points',
+  'takeaways',
+  'highlights',
+  'about this document',
+  'about this pdf',
+  'about this source',
+  'about the document',
+  'about the pdf',
+  'this document',
+  'this pdf',
+  'what is this',
+  'what does this document',
+  'what does this pdf',
+  'tell me about this',
+  'explain this',
+  'what is this document about',
+  'what is this pdf about',
+  'what is the document about',
+  'what is the pdf about',
+  'what does it contain',
+  'what is in this',
+  'give me an overview',
+  'give me a summary',
+  'give me summary',
+  'provide a summary',
+  'provide summary',
+];
+
+const STOP_WORDS = new Set([
+  'what', 'when', 'where', 'which', 'who', 'whom', 'whose', 'why', 'how',
+  'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
+  'do', 'does', 'did', 'can', 'could', 'should', 'would', 'will', 'shall',
+  'may', 'might', 'must', 'the', 'a', 'an', 'and', 'or', 'but', 'if',
+  'then', 'else', 'for', 'of', 'by', 'with', 'about', 'against', 'between',
+  'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to',
+  'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again',
+  'further', 'then', 'once', 'here', 'there', 'all', 'any', 'both', 'each',
+  'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not',
+  'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'now',
+  'give', 'tell', 'show', 'explain', 'describe', 'find', 'list', 'detail',
+  'details', 'information', 'info', 'content', 'contents', 'document',
+  'documents', 'pdf', 'pdfs', 'file', 'files', 'source', 'sources',
+  'material', 'materials', 'note', 'notes', 'notebook', 'this', 'that',
+  'these', 'those', 'please', 'help', 'me', 'my', 'you', 'your', 'it',
+  'its', 'they', 'them', 'their', 'we', 'us', 'our'
+]);
+
 /**
  * Generate a deterministic answer for offline/test environments
  * @param {string} question
@@ -16,27 +70,47 @@ const INSUFFICIENT_INFO_RESPONSE =
  * @returns {string}
  */
 function generateDeterministicDevAnswer(question, formattedSources = []) {
-  if (formattedSources.length === 0) {
+  if (!formattedSources || formattedSources.length === 0) {
     return INSUFFICIENT_INFO_RESPONSE;
   }
 
   const primarySource = formattedSources[0];
-  const qWords = question
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
+  const qLower = (question || '').toLowerCase().trim();
+
+  // 1. Check for broad document-level summary / overview intents
+  const isSummaryIntent = SUMMARY_INTENTS.some((pattern) => qLower.includes(pattern));
+
+  if (isSummaryIntent) {
+    const summarySnippet = primarySource.snippet || 'the uploaded study material';
+    return `Based on **${primarySource.documentTitle || 'your notebook source'}** [SOURCE_1], the document covers the following content: ${summarySnippet}`;
+  }
+
+  // 2. Extract content keywords excluding stop words
+  const contentWords = qLower
+    .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter((w) => w.length > 3);
+    .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
 
-  const snippetLower = (primarySource.snippet || '').toLowerCase();
-  const titleLower = (primarySource.documentTitle || '').toLowerCase();
+  // If query contains only generic question terms (e.g. "What is this?"), answer from retrieved context
+  if (contentWords.length === 0) {
+    const summarySnippet = primarySource.snippet || 'the uploaded study material';
+    return `Based on **${primarySource.documentTitle || 'your notebook source'}** [SOURCE_1], ${summarySnippet}`;
+  }
 
-  const matchCount = qWords.filter((w) => snippetLower.includes(w) || titleLower.includes(w)).length;
-  if (matchCount === 0) {
+  // 3. For specific topic questions, check whether the topic is supported by retrieved sources
+  const allSourcesText = formattedSources
+    .map((s) => `${s.documentTitle || ''} ${s.snippet || ''}`)
+    .join(' ')
+    .toLowerCase();
+
+  const hasRelevantMatch = contentWords.some((w) => allSourcesText.includes(w));
+
+  if (!hasRelevantMatch) {
     return INSUFFICIENT_INFO_RESPONSE;
   }
 
   const summarySnippet = primarySource.snippet || 'the uploaded study material';
-  return `Based on **${primarySource.documentTitle}** [SOURCE_1], ${summarySnippet}`;
+  return `Based on **${primarySource.documentTitle || 'your notebook source'}** [SOURCE_1], ${summarySnippet}`;
 }
 
 /**
