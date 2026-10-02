@@ -13,6 +13,18 @@ export const Input = forwardRef(({
 }, ref) => {
   const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
+  const renderIcon = (icon) => {
+    if (!icon) return null;
+    if (React.isValidElement(icon)) {
+      return icon;
+    }
+    if (typeof icon === 'function' || typeof icon === 'object') {
+      const IconComponent = icon;
+      return <IconComponent className="w-4 h-4" />;
+    }
+    return null;
+  };
+
   return (
     <div className="w-full space-y-1.5">
       {label && (
@@ -22,8 +34,8 @@ export const Input = forwardRef(({
       )}
       <div className="relative flex items-center">
         {LeftIcon && (
-          <div className="absolute left-3.5 pointer-events-none text-[#6B756F]">
-            <LeftIcon className="w-4 h-4" />
+          <div className="absolute left-3.5 pointer-events-none text-[#6B756F] flex items-center justify-center">
+            {renderIcon(LeftIcon)}
           </div>
         )}
         <input
@@ -39,8 +51,8 @@ export const Input = forwardRef(({
           {...props}
         />
         {RightIcon && (
-          <div className="absolute right-3.5 pointer-events-none text-[#6B756F]">
-            <RightIcon className="w-4 h-4" />
+          <div className="absolute right-3.5 pointer-events-none text-[#6B756F] flex items-center justify-center">
+            {renderIcon(RightIcon)}
           </div>
         )}
       </div>

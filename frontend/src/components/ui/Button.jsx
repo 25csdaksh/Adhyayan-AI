@@ -33,6 +33,18 @@ export const Button = ({
     iconSm: 'p-1.5 text-xs',
   };
 
+  const renderIcon = (icon) => {
+    if (!icon) return null;
+    if (React.isValidElement(icon)) {
+      return icon;
+    }
+    if (typeof icon === 'function' || typeof icon === 'object') {
+      const IconComponent = icon;
+      return <IconComponent className="w-4 h-4 shrink-0" />;
+    }
+    return null;
+  };
+
   return (
     <button
       type={type}
@@ -42,12 +54,12 @@ export const Button = ({
       {...props}
     >
       {isLoading ? (
-        <Loader2 className="w-4 h-4 animate-spin text-current" />
-      ) : LeftIcon ? (
-        <LeftIcon className="w-4 h-4 shrink-0" />
-      ) : null}
+        <Loader2 className="w-4 h-4 animate-spin text-current shrink-0" />
+      ) : (
+        renderIcon(LeftIcon)
+      )}
       {children}
-      {!isLoading && RightIcon && <RightIcon className="w-4 h-4 shrink-0" />}
+      {!isLoading && renderIcon(RightIcon)}
     </button>
   );
 };
