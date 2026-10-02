@@ -368,37 +368,35 @@ export const StudyToolsPanel = ({
         isOpen={isViewerModalOpen && !!activeViewerTool}
         onClose={() => setIsViewerModalOpen(false)}
         title={activeViewerTool?.title || 'Study Material'}
-        size="2xl"
+        maxWidth="max-w-4xl"
       >
-        <div className="p-6">
-          {activeViewerTool?.toolType === 'summary' && (
-            <SummaryViewer
-              studyTool={activeViewerTool}
-              onSelectCitation={onSelectCitation}
-            />
-          )}
+        {activeViewerTool?.toolType === 'summary' && (
+          <SummaryViewer
+            studyTool={activeViewerTool}
+            onSelectCitation={onSelectCitation}
+          />
+        )}
 
-          {activeViewerTool?.toolType === 'flashcards' && (
-            <FlashcardViewer
-              studyTool={activeViewerTool}
-              onSelectCitation={onSelectCitation}
-            />
-          )}
+        {activeViewerTool?.toolType === 'flashcards' && (
+          <FlashcardViewer
+            studyTool={activeViewerTool}
+            onSelectCitation={onSelectCitation}
+          />
+        )}
 
-          {activeViewerTool?.toolType === 'quiz' && (
-            <QuizViewer
-              studyTool={activeViewerTool}
-              onSelectCitation={onSelectCitation}
-            />
-          )}
+        {activeViewerTool?.toolType === 'quiz' && (
+          <QuizViewer
+            studyTool={activeViewerTool}
+            onSelectCitation={onSelectCitation}
+          />
+        )}
 
-          {activeViewerTool?.toolType === 'mindmap' && (
-            <MindMapViewer
-              studyTool={activeViewerTool}
-              onSelectCitation={onSelectCitation}
-            />
-          )}
-        </div>
+        {activeViewerTool?.toolType === 'mindmap' && (
+          <MindMapViewer
+            studyTool={activeViewerTool}
+            onSelectCitation={onSelectCitation}
+          />
+        )}
       </Modal>
     </div>
   );

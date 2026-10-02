@@ -15,16 +15,33 @@ import { CitationCard } from '../chat/CitationCard';
 export const SummaryViewer = ({ studyTool, onSelectCitation }) => {
   const [copied, setCopied] = useState(false);
 
-  if (!studyTool || !studyTool.result) {
-    return null;
+  if (!studyTool) {
+    return (
+      <div className="text-center py-8 text-xs text-[#6B756F]">
+        No summary data available.
+      </div>
+    );
   }
 
-  const { result, citations = [], title, createdAt } = studyTool;
-  const { overview, keyPoints = [], concepts = [], mode } = result;
+  // Handle both object and parsed JSON result safely
+  const result = typeof studyTool.result === 'string'
+    ? (() => { try { return JSON.parse(studyTool.result); } catch { return {}; } })()
+    : (studyTool.result || studyTool || {});
+
+  const citations = Array.isArray(studyTool.citations)
+    ? studyTool.citations
+    : (Array.isArray(result.citations) ? result.citations : []);
+
+  const displayTitle = studyTool.title || result.title || 'Executive Summary';
+  const displayCreatedAt = studyTool.createdAt || new Date().toISOString();
+  const overview = result.overview || result.summary || '';
+  const keyPoints = Array.isArray(result.keyPoints) ? result.keyPoints : [];
+  const concepts = Array.isArray(result.concepts) ? result.concepts : [];
+  const mode = result.mode || studyTool.input?.mode || 'detailed';
 
   const handleCopy = async () => {
     const textToCopy = `
-# ${title || 'Notebook Summary'}
+# ${displayTitle}
 
 ## Overview
 ${overview}
@@ -33,12 +50,36 @@ ${overview}
 ${keyPoints.map((kp, idx) => `${idx + 1}. ${kp}`).join('\n')}
 
 ## Important Concepts
-${concepts.map((c) => `- **${c.term}**: ${c.definition}`).join('\n')}
+${concepts.map((c) => `- **${c.term || c.name || 'Concept'}**: ${c.definition || c.description || ''}`).join('\n')}
     `.trim();
 
     await navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Render text with clickable citation badges [1], [2], etc.
+  const renderTextWithCitations = (text) => {
+    if (!text || typeof text !== 'string') return text;
+    const parts = text.split(/(\[\d+\]|\[SOURCE_\d+\])/g);
+    return parts.map((part, idx) => {
+      const match = part.match(/^\[(?:SOURCE_)?(\d+)\]$/i);
+      if (match) {
+        const citationNum = parseInt(match[1], 10);
+        const citObj = citations.find((c) => c.citationNumber === citationNum);
+        return (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => citObj && onSelectCitation && onSelectCitation(citObj)}
+            className="inline-flex items-center px-1.5 py-0.2 mx-0.5 rounded text-[11px] font-bold bg-[#E8EFEA] text-[#1F5E4B] border border-[#C2D8CD] hover:bg-[#D8E9E2] cursor-pointer transition-colors"
+          >
+            {citationNum}
+          </button>
+        );
+      }
+      return <span key={idx}>{part}</span>;
+    });
   };
 
   return (
@@ -48,7 +89,7 @@ ${concepts.map((c) => `- **${c.term}**: ${c.definition}`).join('\n')}
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-bold text-[#17211D]">
-              {title || 'Notebook Summary'}
+              {displayTitle}
             </h3>
             <Badge variant={mode === 'short' ? 'neutral' : 'forest'} size="sm">
               {mode === 'short' ? 'Concise Summary' : 'Detailed Summary'}
@@ -56,7 +97,7 @@ ${concepts.map((c) => `- **${c.term}**: ${c.definition}`).join('\n')}
           </div>
           <p className="text-xs text-[#6B756F]">
             Grounded in {citations.length} source reference{citations.length === 1 ? '' : 's'} •{' '}
-            {new Date(createdAt).toLocaleDateString()}
+            {new Date(displayCreatedAt).toLocaleDateString()}
           </p>
         </div>
 
@@ -71,15 +112,17 @@ ${concepts.map((c) => `- **${c.term}**: ${c.definition}`).join('\n')}
       </div>
 
       {/* Overview Section */}
-      <div className="p-4 bg-[#FAFBF9] rounded-xl border border-[#E2E7E3] space-y-2">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-[#6B756F] flex items-center gap-1.5">
-          <FileText className="w-3.5 h-3.5 text-[#1F5E4B]" />
-          Executive Overview
-        </h4>
-        <p className="text-sm text-[#17211D] leading-relaxed whitespace-pre-wrap">
-          {overview}
-        </p>
-      </div>
+      {overview && (
+        <div className="p-4 bg-[#FAFBF9] rounded-xl border border-[#E2E7E3] space-y-2">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-[#6B756F] flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5 text-[#1F5E4B]" />
+            Executive Overview
+          </h4>
+          <div className="text-sm text-[#17211D] leading-relaxed whitespace-pre-wrap">
+            {renderTextWithCitations(overview)}
+          </div>
+        </div>
+      )}
 
       {/* Key Points */}
       {keyPoints.length > 0 && (
@@ -97,9 +140,9 @@ ${concepts.map((c) => `- **${c.term}**: ${c.definition}`).join('\n')}
                 <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#E8EFEA] text-[#1F5E4B] flex items-center justify-center text-xs font-bold mt-0.5">
                   {idx + 1}
                 </div>
-                <p className="text-sm text-[#17211D] leading-normal pt-0.5">
-                  {point}
-                </p>
+                <div className="text-sm text-[#17211D] leading-normal pt-0.5">
+                  {renderTextWithCitations(typeof point === 'string' ? point : JSON.stringify(point))}
+                </div>
               </div>
             ))}
           </div>
@@ -120,11 +163,11 @@ ${concepts.map((c) => `- **${c.term}**: ${c.definition}`).join('\n')}
                 className="p-3.5 bg-white rounded-xl border border-[#E2E7E3] space-y-1.5 hover:shadow-2xs transition-shadow"
               >
                 <span className="text-xs font-bold text-[#1F5E4B]">
-                  {concept.term}
+                  {concept.term || concept.name || `Concept #${idx + 1}`}
                 </span>
-                <p className="text-xs text-[#3D4741] leading-relaxed">
-                  {concept.definition}
-                </p>
+                <div className="text-xs text-[#3D4741] leading-relaxed">
+                  {renderTextWithCitations(concept.definition || concept.description || '')}
+                </div>
               </div>
             ))}
           </div>
@@ -142,7 +185,7 @@ ${concepts.map((c) => `- **${c.term}**: ${c.definition}`).join('\n')}
               <CitationCard
                 key={idx}
                 citation={citation}
-                onSelectCitation={onSelectCitation}
+                onPreview={(cit) => onSelectCitation && onSelectCitation(cit)}
               />
             ))}
           </div>
