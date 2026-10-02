@@ -135,7 +135,10 @@ async function generateEmbedding(text) {
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const result = await model.embedContent(cleanText);
+      const result = await model.embedContent({
+        content: { parts: [{ text: cleanText }] },
+        outputDimensionality: EXPECTED_DIMENSIONS,
+      });
       const vector = result?.embedding?.values;
 
       if (!vector) {
@@ -203,6 +206,7 @@ async function generateEmbeddings(texts, batchSize = 16) {
     try {
       const requests = batch.map((t) => ({
         content: { parts: [{ text: t }] },
+        outputDimensionality: EXPECTED_DIMENSIONS,
       }));
 
       const batchResult = await model.batchEmbedContents({ requests });
