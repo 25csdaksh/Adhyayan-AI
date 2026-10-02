@@ -4,7 +4,7 @@
 
 ---
 
-## 📌 Status: Phase 08 Completed (Grounded RAG Chat + Citations)
+## 📌 Status: Phase 09 Completed (AI Study Tools)
 
 - **Phase 01:** Foundation, Monorepo, Express Backend, MongoDB, CORS, `/api/health` *(Verified)*
 - **Phase 02:** Light-First Academic UI/UX, Design System, Landing Page, Dashboard, 3-Panel Workspace, Chat UI, Source Management, Settings, Profile *(Verified)*
@@ -14,9 +14,89 @@
 - **Phase 06:** Document Processing Pipeline, Text Extraction, Cleaning & Deterministic Chunking *(Verified)*
 - **Phase 07:** Google Gemini Embeddings (`text-embedding-004`), MongoDB Atlas Vector Search & Semantic Retrieval *(Verified)*
 - **Phase 08:** Grounded RAG Chat, AI Answers & Citations Synthesis *(Verified)*
-- **Phase 09:** Study Tools (Summaries, Flashcards, Quizzes, Mind Maps) *(Upcoming)*
+- **Phase 09:** AI Study Tools (Summarizer, Flashcards, Quizzes, Mind Maps) *(Verified)*
 
 ---
+
+## 📚 AI Study Tools (Phase 09)
+
+### Study Tools Architecture
+
+```text
+User Action (Select Tool & Optional Topic)
+    │
+    ▼
+Verify JWT & Notebook Ownership
+    │
+    ▼
+Bounded Chunk Retrieval (Scoped to notebookId & topic via vector search / top chunks)
+    │
+    ▼
+Context Builder (Structured sources with [SOURCE_X] IDs within token/character limits)
+    │
+    ▼
+Dedicated Study Tool Prompt Builder (Enforces strict source grounding & JSON schemas)
+    │
+    ▼
+Gemini Chat Generation (GEMINI_CHAT_MODEL)
+    │
+    ▼
+Structured JSON Output Validation & Sanitization (studyOutputValidator.js)
+    │
+    ▼
+Citation Extraction & Verification (Maps [SOURCE_X] → chunkId, doc title, page span)
+    │
+    ▼
+Save StudyToolResult Record & Return Clean Payload to Frontend
+```
+
+### Core Study Tools
+
+1. **Executive Summarizer (`POST /api/notebooks/:notebookId/study-tools/summary`):**
+   - Modes: `detailed` (comprehensive overview, key takeaways, concept definitions glossary) and `short` (concise bullet-point synthesis).
+   - Grounded citations attached to each point and concept.
+2. **Flashcard Generator (`POST /api/notebooks/:notebookId/study-tools/flashcards`):**
+   - Configurable count (1–30, default 10) and difficulty (`easy`, `medium`, `hard`, `mixed`).
+   - Generates structured cards with test questions, source-derived answers, and citations.
+   - Frontend provides interactive flip card deck, shuffle, restart, and grid mode.
+3. **Multiple-Choice Quiz Generator (`POST /api/notebooks/:notebookId/study-tools/quiz`):**
+   - Configurable count (1–20, default 10) and difficulty.
+   - Generates questions with exactly 4 options, a validated `correctAnswer` index (0–3), grounded explanation, and source citations.
+   - Frontend provides interactive question-by-question flow, instant feedback, and final score percentage review.
+4. **Knowledge Mind Map Generator (`POST /api/notebooks/:notebookId/study-tools/mindmap`):**
+   - Generates a hierarchical recursive JSON taxonomy tree (max depth: 5, max nodes: 100).
+   - Frontend renders an interactive collapsible concept tree with node level indicators.
+
+### Study Tool Data Model (`backend/src/models/StudyToolResult.js`)
+
+- `userId`: ObjectId (references `User`, required, indexed).
+- `notebookId`: ObjectId (references `Notebook`, required, indexed).
+- `toolType`: String (`'summary' | 'flashcards' | 'quiz' | 'mindmap'`, required).
+- `title`: String (descriptive study title).
+- `input`: Mixed (stores configuration like mode, count, difficulty, topic).
+- `result`: Mixed (structured tool output validated against schemas).
+- `citations`: Array of citation objects (`citationNumber`, `chunkId`, `documentId`, `documentTitle`, `sourceType`, `pageNumber`, `pageStart`, `pageEnd`, `snippet`).
+- `metadata`: Mixed (model used, retrieved chunk counts).
+- Timestamps: `true`.
+- Compound Indexes: `{ notebookId: 1, userId: 1, createdAt: -1 }` and `{ notebookId: 1, toolType: 1, createdAt: -1 }`.
+
+### Study Tool REST APIs
+
+All endpoints require JWT Bearer authentication and enforce strict notebook ownership:
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/notebooks/:notebookId/study-tools/summary` | Generate grounded summary |
+| `POST` | `/api/notebooks/:notebookId/study-tools/flashcards` | Generate grounded flashcard deck |
+| `POST` | `/api/notebooks/:notebookId/study-tools/quiz` | Generate grounded multiple-choice quiz |
+| `POST` | `/api/notebooks/:notebookId/study-tools/mindmap` | Generate grounded hierarchical mind map |
+| `GET` | `/api/notebooks/:notebookId/study-tools` | List previously generated study tools for notebook |
+| `GET` | `/api/notebooks/:notebookId/study-tools/:studyToolId` | Get single study tool record |
+| `DELETE` | `/api/notebooks/:notebookId/study-tools/:studyToolId` | Delete study tool record |
+
+### Cascade Deletion Guarantees
+
+When a notebook is deleted, all associated `StudyToolResult` records are automatically removed along with documents, chunks, chat sessions, and chat messages.
 
 ---
 

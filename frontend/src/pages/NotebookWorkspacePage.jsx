@@ -683,7 +683,11 @@ export const NotebookWorkspacePage = () => {
             ${mobileActivePanel === 'tools' ? 'flex w-full absolute inset-0 z-20 pt-16 bg-white' : 'hidden lg:flex'}`}
         >
           <div className="flex-1 overflow-y-auto p-4">
-            <StudyToolsPanel notebookTitle={notebook.title} />
+            <StudyToolsPanel
+              notebookId={id}
+              notebookTitle={notebook?.title}
+              onSelectCitation={(cit) => setCitationPreview(cit)}
+            />
           </div>
         </div>
       </div>
