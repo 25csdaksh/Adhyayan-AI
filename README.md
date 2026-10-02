@@ -4,7 +4,7 @@
 
 ---
 
-## 📌 Status: Phase 07 Completed (Embeddings & MongoDB Atlas Vector Search)
+## 📌 Status: Phase 08 Completed (Grounded RAG Chat + Citations)
 
 - **Phase 01:** Foundation, Monorepo, Express Backend, MongoDB, CORS, `/api/health` *(Verified)*
 - **Phase 02:** Light-First Academic UI/UX, Design System, Landing Page, Dashboard, 3-Panel Workspace, Chat UI, Source Management, Settings, Profile *(Verified)*
@@ -13,7 +13,120 @@
 - **Phase 05:** Document & Multi-Format Source Management (PDF, DOCX, TXT, Web URL, Plain Text), Cloudinary Storage *(Verified)*
 - **Phase 06:** Document Processing Pipeline, Text Extraction, Cleaning & Deterministic Chunking *(Verified)*
 - **Phase 07:** Google Gemini Embeddings (`text-embedding-004`), MongoDB Atlas Vector Search & Semantic Retrieval *(Verified)*
-- **Phase 08:** Grounded RAG Chat, AI Answers & Citations Synthesis *(Upcoming)*
+- **Phase 08:** Grounded RAG Chat, AI Answers & Citations Synthesis *(Verified)*
+- **Phase 09:** Study Tools (Summaries, Flashcards, Quizzes, Mind Maps) *(Upcoming)*
+
+---
+
+---
+
+## 🤖 Grounded RAG Chat & Citations (Phase 08)
+
+### RAG Architecture Flow
+
+```text
+User Question
+    │
+    ▼
+Validate & Trim Message (length ≤ 5000)
+    │
+    ▼
+Verify JWT & Notebook Ownership
+    │
+    ▼
+Generate Query Embedding (Gemini text-embedding-004)
+    │
+    ▼
+Vector Search (MongoDB Atlas Vector Search / Scoped Cosine Similarity)
+    │
+    ▼
+Retrieve Top-K Relevant Chunks (filtered by notebookId)
+    │
+    ▼
+Context Builder (Construct structured sources with [SOURCE_X] IDs, max tokens & chars)
+    │
+    ▼
+Grounded Gemini Prompt (Strict anti-hallucination system instructions + recent chat history)
+    │
+    ▼
+Answer & Citation Synthesis (Maps [SOURCE_X] → validated document & page references)
+    │
+    ▼
+Save User & Assistant ChatMessages (Stores validated citations, chunkIds, page numbers)
+    │
+    ▼
+Return Clean Grounded Response with Source References
+```
+
+### Dedicated RAG Services (`backend/src/services/rag/`)
+
+- **`contextBuilder.js`:**
+  - Formats retrieved chunks into unambiguous `[SOURCE_1]`, `[SOURCE_2]` blocks.
+  - Enforces strict context budget limits: max context chunks (`8`) and max context characters (`30,000`).
+  - Maintains deterministic `sourceMap` linking temporary IDs to rich document/chunk metadata.
+- **`promptBuilder.js`:**
+  - Enforces strict educational and anti-hallucination system instructions.
+  - Limits conversation history window to the most recent `8` messages (`RAG_MAX_HISTORY_MESSAGES`).
+  - Grounds generation exclusively on provided notebook sources.
+- **`citationService.js`:**
+  - Extracts model source references (`[SOURCE_X]`).
+  - Validates and deduplicates citations against retrieved chunks.
+  - Replaces internal source tags with clean, sequential `[1]`, `[2]` numeric markers.
+  - Generates structured citation payloads with `chunkId`, `documentId`, `documentTitle`, `sourceType`, `pageNumber`, `pageStart`, and `pageEnd`.
+- **`ragService.js`:**
+  - Orchestrates the retrieval, context preparation, Gemini chat completion, and citation processing.
+  - **Insufficient Information Behavior:** If vector retrieval yields 0 matching chunks or if evidence is insufficient, returns an explicit safe response (`"I couldn't find enough information about this in your notebook sources..."`) without falling back to ungrounded LLM general knowledge.
+
+### Chat Data Models
+
+#### `ChatSession` (`backend/src/models/ChatSession.js`)
+- `notebookId`: ObjectId (required, references `Notebook`).
+- `userId`: ObjectId (required, references `User`).
+- `title`: String (auto-generated from first message or default `'New Chat'`).
+- Compound Index: `{ userId: 1, notebookId: 1, updatedAt: -1 }`.
+
+#### `ChatMessage` (`backend/src/models/ChatMessage.js`)
+- `sessionId`: ObjectId (required, references `ChatSession`).
+- `notebookId`: ObjectId (required, references `Notebook`).
+- `userId`: ObjectId (required, references `User`).
+- `role`: `'user' | 'assistant'` (required).
+- `content`: String (required).
+- `citations`: Array of structured citations (`citationNumber`, `chunkId`, `documentId`, `documentTitle`, `sourceType`, `pageNumber`, `pageStart`, `pageEnd`, `snippet`).
+- `retrieval`: Metadata capturing `topK`, `scoreThreshold`, and `retrievedChunkCount`.
+- `model`: String (e.g. `'gemini-1.5-flash'`).
+- Compound Indexes: `{ sessionId: 1, createdAt: 1 }` and `{ notebookId: 1, createdAt: 1 }`.
+
+### Chat REST APIs
+
+All routes are mounted under `/api/notebooks/:notebookId/chats` and require JWT authentication:
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/notebooks/:notebookId/chats` | Create a new chat session |
+| `GET` | `/api/notebooks/:notebookId/chats` | List user chat sessions for the notebook (paginated) |
+| `GET` | `/api/notebooks/:notebookId/chats/:sessionId` | Get chat session details |
+| `DELETE` | `/api/notebooks/:notebookId/chats/:sessionId` | Delete chat session & cascade delete all its messages |
+| `GET` | `/api/notebooks/:notebookId/chats/:sessionId/messages` | Get chronological message history |
+| `POST` | `/api/notebooks/:notebookId/chats/:sessionId/messages` | Send user message & receive grounded RAG answer with citations |
+
+### Cascade Deletion Guarantees
+
+- Deleting a `ChatSession` automatically deletes all associated `ChatMessage` documents.
+- Deleting a `Notebook` cascades and deletes all child `Document`, `Chunk`, `ChatSession`, and `ChatMessage` records, eliminating orphaned data.
+
+### Environment Configuration
+
+```env
+# Gemini Chat & RAG Settings
+GEMINI_CHAT_MODEL=gemini-1.5-flash
+RAG_DEFAULT_TOP_K=5
+RAG_MAX_TOP_K=10
+RAG_DEFAULT_SCORE_THRESHOLD=0.1
+RAG_MAX_CONTEXT_CHUNKS=8
+RAG_MAX_CONTEXT_CHARS=30000
+RAG_MAX_HISTORY_MESSAGES=8
+MAX_CHAT_MESSAGE_LENGTH=5000
+```
 
 ---
 

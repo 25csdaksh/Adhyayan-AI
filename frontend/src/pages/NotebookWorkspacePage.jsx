@@ -23,21 +23,25 @@ import {
   PanelLeft,
   PanelRightClose,
   PanelRight,
+  ChevronDown,
+  Quote,
+  Loader2,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
+import { Dropdown, DropdownItem, DropdownDivider } from '../components/ui/Dropdown';
 import { SourceCard } from '../components/sources/SourceCard';
 import { AddSourceModal } from '../components/sources/AddSourceModal';
 import { ChatMessage } from '../components/chat/ChatMessage';
 import { ChatInput } from '../components/chat/ChatInput';
 import { StudyToolsPanel } from '../components/study/StudyToolsPanel';
-import { MOCK_NOTEBOOKS, MOCK_CHAT_CONVERSATION } from '../mock/mockData';
 import { notebookService } from '../api/notebookService';
+import { documentService } from '../api/documentService';
+import { chatService } from '../api/chatService';
 import { useToast } from '../context/ToastContext';
 import { EmptyState } from '../components/ui/EmptyState';
-
-import { documentService } from '../api/documentService';
 import { DeleteSourceModal } from '../components/sources/DeleteSourceModal';
 import { Skeleton } from '../components/ui/Skeleton';
 
@@ -51,7 +55,15 @@ export const NotebookWorkspacePage = () => {
   const [sourcesLoading, setSourcesLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sources, setSources] = useState([]);
-  const [messages, setMessages] = useState(MOCK_CHAT_CONVERSATION);
+
+  // Chat State
+  const [chatSessions, setChatSessions] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [citationPreview, setCitationPreview] = useState(null);
+
   const [addSourceOpen, setAddSourceOpen] = useState(false);
   const [sourceToDelete, setSourceToDelete] = useState(null);
   const [isDeletingSource, setIsDeletingSource] = useState(false);
@@ -64,14 +76,25 @@ export const NotebookWorkspacePage = () => {
 
   const chatEndRef = useRef(null);
 
+  // Scroll to bottom of chat
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isSending]);
+
+  // Load Notebook & Sources
   const fetchWorkspaceData = async (isMounted) => {
     setLoading(true);
     setSourcesLoading(true);
     setError(null);
     try {
-      const [nbRes, docsRes] = await Promise.all([
+      const [nbRes, docsRes, chatsRes] = await Promise.all([
         notebookService.getNotebook(id),
         documentService.getDocuments(id),
+        chatService.getChatSessions(id).catch(() => ({ data: { sessions: [] } })),
       ]);
 
       if (isMounted) {
@@ -84,10 +107,29 @@ export const NotebookWorkspacePage = () => {
         if (docsRes?.data?.documents) {
           setSources(docsRes.data.documents);
         }
+
+        const sessions = chatsRes?.data?.sessions || [];
+        setChatSessions(sessions);
+
+        if (sessions.length > 0) {
+          setActiveSessionId(sessions[0]._id);
+        } else {
+          // Auto-create initial default chat session
+          try {
+            const newSessionRes = await chatService.createChatSession(id, { title: 'New Chat' });
+            if (newSessionRes?.data?.session) {
+              setChatSessions([newSessionRes.data.session]);
+              setActiveSessionId(newSessionRes.data.session._id);
+            }
+          } catch (createErr) {
+            console.warn('Failed to auto-create default chat session:', createErr.message);
+          }
+        }
       }
     } catch (err) {
       if (isMounted) {
-        const errMsg = err?.response?.data?.message || err?.message || 'Failed to load workspace. Please try again.';
+        const errMsg =
+          err?.response?.data?.message || err?.message || 'Failed to load workspace. Please try again.';
         setError(errMsg);
       }
     } finally {
@@ -107,6 +149,35 @@ export const NotebookWorkspacePage = () => {
       isMounted = false;
     };
   }, [id]);
+
+  // Load messages when activeSessionId changes
+  useEffect(() => {
+    let isMounted = true;
+    if (!id || !activeSessionId) return;
+
+    const loadMessages = async () => {
+      setChatLoading(true);
+      try {
+        const res = await chatService.getChatMessages(id, activeSessionId);
+        if (isMounted && res?.data?.messages) {
+          setMessages(res.data.messages);
+        }
+      } catch (err) {
+        if (isMounted) {
+          toast.error('Failed to load chat history', 'Chat Error');
+        }
+      } finally {
+        if (isMounted) {
+          setChatLoading(false);
+        }
+      }
+    };
+
+    loadMessages();
+    return () => {
+      isMounted = false;
+    };
+  }, [id, activeSessionId]);
 
   // Periodic polling when any source is pending or processing
   const hasProcessingSources = sources.some(
@@ -168,41 +239,101 @@ export const NotebookWorkspacePage = () => {
     }
   };
 
-  const handleSendMessage = (userQuery) => {
-    const newUserMsg = {
-      id: `msg-${Date.now()}`,
-      sender: 'user',
-      text: userQuery,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  // Create a new fresh chat session
+  const handleNewChat = async () => {
+    try {
+      const res = await chatService.createChatSession(id, { title: 'New Chat' });
+      if (res?.data?.session) {
+        setChatSessions((prev) => [res.data.session, ...prev]);
+        setActiveSessionId(res.data.session._id);
+        setMessages([]);
+        toast.success('New chat session started', 'Chat Created');
+      }
+    } catch (err) {
+      toast.error('Failed to create new chat session', 'Error');
+    }
+  };
+
+  // Delete current chat session
+  const handleDeleteChat = async (sessionId) => {
+    if (!sessionId) return;
+    try {
+      await chatService.deleteChatSession(id, sessionId);
+      const remaining = chatSessions.filter((s) => s._id !== sessionId);
+      setChatSessions(remaining);
+      toast.info('Chat session deleted', 'Chat Deleted');
+
+      if (remaining.length > 0) {
+        setActiveSessionId(remaining[0]._id);
+      } else {
+        handleNewChat();
+      }
+    } catch (err) {
+      toast.error('Failed to delete chat session', 'Error');
+    }
+  };
+
+  // Send message and get grounded RAG answer
+  const handleSendMessage = async (userQuery) => {
+    if (!userQuery || !userQuery.trim() || isSending) return;
+
+    let targetSessionId = activeSessionId;
+    if (!targetSessionId) {
+      try {
+        const newSessionRes = await chatService.createChatSession(id, { title: 'New Chat' });
+        targetSessionId = newSessionRes.data.session._id;
+        setChatSessions([newSessionRes.data.session]);
+        setActiveSessionId(targetSessionId);
+      } catch (err) {
+        toast.error('Failed to initialize chat session', 'Error');
+        return;
+      }
+    }
+
+    const optimisticUserMsg = {
+      _id: `temp-${Date.now()}`,
+      role: 'user',
+      content: userQuery.trim(),
+      createdAt: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, newUserMsg]);
+    setMessages((prev) => [...prev, optimisticUserMsg]);
+    setIsSending(true);
 
-    // Simulate AI grounded response after short realistic pause
-    setTimeout(() => {
-      const primarySource = sources[0] || { title: 'Uploaded_Notes.pdf' };
-      const simulatedAiMsg = {
-        id: `msg-${Date.now() + 1}`,
-        sender: 'ai',
-        text: `Based on your active study sources in **${notebook.title}** (specifically *${primarySource.title}*):\n\n### Synthesis & Key Concept Analysis\n* **Primary Finding**: The concepts in your query are strictly addressed in the foundational unit notes.\n* **Operational Rule**: When implementing these protocols, state synchronization ensures consistency across distributed nodes.\n\n*Review the citation below to inspect the original text snippet in your source document.*`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        citations: [
-          {
-            id: `c-${Date.now()}`,
-            sourceTitle: primarySource.title,
-            page: primarySource.pages ? Math.floor(primarySource.pages / 3) : 14,
-            snippet: primarySource.snippet || 'Fundamental principles documented in the grounded research collection.',
-          },
-        ],
+    try {
+      const res = await chatService.sendMessage(id, targetSessionId, { message: userQuery.trim() });
+      if (res?.data?.assistantMessage) {
+        setMessages((prev) => [
+          ...prev.filter((m) => m._id !== optimisticUserMsg._id),
+          res.data.userMessage || optimisticUserMsg,
+          res.data.assistantMessage,
+        ]);
+
+        if (res.data.session?.title) {
+          setChatSessions((prev) =>
+            prev.map((s) => (s._id === targetSessionId ? { ...s, title: res.data.session.title } : s))
+          );
+        }
+      }
+    } catch (err) {
+      const errMsg =
+        err?.response?.data?.message || err?.message || 'Failed to generate grounded AI answer.';
+      toast.error(errMsg, 'RAG Error');
+
+      // Add assistant error fallback message
+      const errorMsg = {
+        _id: `err-${Date.now()}`,
+        role: 'assistant',
+        content: `⚠️ **Unable to generate response**: ${errMsg}`,
+        createdAt: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, simulatedAiMsg]);
-    }, 600);
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  const handleClearConversation = () => {
-    setMessages([]);
-    toast.info('Conversation history cleared', 'Workspace Reset');
-  };
+  const activeSession = chatSessions.find((s) => s._id === activeSessionId) || chatSessions[0];
 
   if (loading) {
     return (
@@ -332,22 +463,66 @@ export const NotebookWorkspacePage = () => {
         </div>
 
         <div className="hidden sm:flex items-center gap-2">
+          {/* Chat Sessions Dropdown */}
+          {chatSessions.length > 0 && (
+            <Dropdown
+              trigger={
+                <button
+                  type="button"
+                  className="px-3 py-1.5 rounded-lg border border-[#E2E7E3] hover:border-[#1F5E4B] text-xs font-semibold text-[#17211D] bg-white flex items-center gap-1.5 transition-colors cursor-pointer max-w-[180px]"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-[#1F5E4B]" />
+                  <span className="truncate">{activeSession?.title || 'Chat History'}</span>
+                  <ChevronDown className="w-3 h-3 text-[#8E9993]" />
+                </button>
+              }
+            >
+              <div className="px-3 py-1 text-[10px] font-bold text-[#8E9993] uppercase tracking-wider">
+                Notebook Chats
+              </div>
+              {chatSessions.map((session) => (
+                <DropdownItem
+                  key={session._id}
+                  icon={MessageSquare}
+                  onClick={() => setActiveSessionId(session._id)}
+                  className={session._id === activeSessionId ? 'font-bold text-[#1F5E4B] bg-[#E8F2EE]' : ''}
+                >
+                  <span className="truncate">{session.title}</span>
+                </DropdownItem>
+              ))}
+              <DropdownDivider />
+              <DropdownItem icon={Plus} onClick={handleNewChat}>
+                New Chat Thread
+              </DropdownItem>
+              {activeSessionId && (
+                <DropdownItem
+                  icon={Trash2}
+                  danger
+                  onClick={() => handleDeleteChat(activeSessionId)}
+                >
+                  Delete Current Chat
+                </DropdownItem>
+              )}
+            </Dropdown>
+          )}
+
           <Button
             variant="outline"
+            size="sm"
+            leftIcon={Plus}
+            onClick={handleNewChat}
+            title="Start new chat thread"
+          >
+            New Chat
+          </Button>
+
+          <Button
+            variant="secondary"
             size="sm"
             leftIcon={Plus}
             onClick={() => setAddSourceOpen(true)}
           >
             Add Source
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={RotateCcw}
-            onClick={handleClearConversation}
-            title="Clear Chat History"
-          >
-            Reset
           </Button>
         </div>
       </div>
@@ -434,12 +609,23 @@ export const NotebookWorkspacePage = () => {
         >
           {/* Chat Messages Feed */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 max-w-4xl w-full mx-auto">
-            {messages.length > 0 ? (
+            {chatLoading ? (
+              <div className="space-y-4 py-8">
+                <Skeleton className="h-20 w-3/4 rounded-2xl" />
+                <Skeleton className="h-32 w-full rounded-2xl" />
+              </div>
+            ) : messages.length > 0 ? (
               messages.map((msg) => (
                 <ChatMessage
-                  key={msg.id}
+                  key={msg._id || msg.id}
                   message={msg}
-                  onRegenerate={() => handleSendMessage(messages[messages.length - 2]?.text || 'Clarify the last topic')}
+                  onCitationClick={(cit) => setCitationPreview(cit)}
+                  onRegenerate={() => {
+                    const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+                    if (lastUserMsg) {
+                      handleSendMessage(lastUserMsg.content || lastUserMsg.text);
+                    }
+                  }}
                 />
               ))
             ) : (
@@ -452,10 +638,30 @@ export const NotebookWorkspacePage = () => {
                   Ask anything about your sources
                 </h3>
                 <p className="text-xs sm:text-sm text-[#6B756F] leading-relaxed">
-                  Upload your materials and start exploring your knowledge. Every answer is grounded directly in your uploaded notes.
+                  Upload your materials and start exploring your knowledge. Every answer is grounded directly in your uploaded notes with verifiable citations.
                 </p>
               </div>
             )}
+
+            {/* Generating response loader state */}
+            {isSending && (
+              <div className="flex gap-3 sm:gap-4 py-4 px-3 sm:px-5 rounded-2xl bg-white border border-[#E2E7E3] shadow-2xs animate-pulse">
+                <div className="w-8 h-8 rounded-xl bg-[#1F5E4B] text-white flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 animate-spin" />
+                </div>
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#17211D]">StudyLM AI</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#E8F2EE] text-[#1F5E4B] flex items-center gap-1">
+                      <Loader2 className="w-2.5 h-2.5 animate-spin" /> Grounding in notebook sources...
+                    </span>
+                  </div>
+                  <div className="h-3.5 bg-[#F2F5F3] rounded w-5/6" />
+                  <div className="h-3.5 bg-[#F2F5F3] rounded w-2/3" />
+                </div>
+              </div>
+            )}
+
             <div ref={chatEndRef} />
           </div>
 
@@ -463,6 +669,7 @@ export const NotebookWorkspacePage = () => {
           <div className="p-4 sm:p-6 pt-2 bg-gradient-to-t from-[#F7F8F6] via-[#F7F8F6] to-transparent shrink-0 max-w-4xl w-full mx-auto">
             <ChatInput
               onSend={handleSendMessage}
+              disabled={isSending}
               onAttachSource={() => setAddSourceOpen(true)}
               sourceCount={sources.length}
             />
@@ -497,6 +704,42 @@ export const NotebookWorkspacePage = () => {
         source={sourceToDelete}
         isDeleting={isDeletingSource}
       />
+
+      {/* Citation Preview Modal */}
+      <Modal
+        isOpen={Boolean(citationPreview)}
+        onClose={() => setCitationPreview(null)}
+        title={citationPreview?.documentTitle || 'Grounded Citation'}
+        description={`Source reference [${citationPreview?.citationNumber || 1}] • ${
+          citationPreview?.pageNumber ? `Page ${citationPreview.pageNumber}` : citationPreview?.sourceType?.toUpperCase() || 'Source Document'
+        }`}
+        footer={
+          <Button variant="primary" onClick={() => setCitationPreview(null)}>
+            Close Preview
+          </Button>
+        }
+      >
+        <div className="space-y-4 text-xs sm:text-sm text-[#17211D]">
+          <div className="p-3 bg-[#FAFBF9] rounded-xl border border-[#E2E7E3] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#1F5E4B]" />
+              <span className="font-semibold text-[#17211D]">{citationPreview?.documentTitle}</span>
+            </div>
+            <Badge variant="forest" size="sm">
+              {citationPreview?.pageNumber ? `Page ${citationPreview.pageNumber}` : `${citationPreview?.sourceType || 'Text'} Source`}
+            </Badge>
+          </div>
+
+          <div className="p-4 bg-white rounded-xl border border-[#D8E9E2] space-y-2 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#1F5E4B]">
+              <Quote className="w-3.5 h-3.5" /> Grounded Passage Excerpt:
+            </div>
+            <p className="text-[#17211D] text-xs sm:text-sm leading-relaxed border-l-3 border-[#1F5E4B] pl-3 py-1 italic bg-[#FAFBF9] rounded-r-lg">
+              "{citationPreview?.snippet || 'Verifiable source text content extracted during document indexing.'}"
+            </p>
+          </div>
+        </div>
+      </Modal>
 
       {/* Source Excerpt / Summary Modal */}
       <Modal

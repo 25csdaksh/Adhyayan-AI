@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 const Notebook = require('../models/Notebook');
+const Document = require('../models/Document');
+const Chunk = require('../models/Chunk');
+const ChatSession = require('../models/ChatSession');
+const ChatMessage = require('../models/ChatMessage');
+const { deleteAsset } = require('../config/cloudinary');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
@@ -176,10 +181,6 @@ const updateNotebook = asyncHandler(async (req, res) => {
   );
 });
 
-const Document = require('../models/Document');
-const Chunk = require('../models/Chunk');
-const { deleteAsset } = require('../config/cloudinary');
-
 /**
  * Delete a notebook (cascades document, chunk, and Cloudinary asset deletions)
  * DELETE /api/notebooks/:id
@@ -205,11 +206,13 @@ const deleteNotebook = asyncHandler(async (req, res) => {
         await deleteAsset(doc.storagePublicId, 'raw');
       }
     }
-    // Remove all child documents and chunks from MongoDB
+    // Remove all child documents, chunks, chat sessions, and messages from MongoDB
     await Document.deleteMany({ notebookId: id });
     await Chunk.deleteMany({ notebookId: id });
+    await ChatSession.deleteMany({ notebookId: id });
+    await ChatMessage.deleteMany({ notebookId: id });
   } catch (cleanupErr) {
-    console.warn(`[Notebook Cleanup Warning] Error cleaning child documents for notebook ${id}:`, cleanupErr.message);
+    console.warn(`[Notebook Cleanup Warning] Error cleaning child resources for notebook ${id}:`, cleanupErr.message);
   }
 
   return ApiResponse.success(

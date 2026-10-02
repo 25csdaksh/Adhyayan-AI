@@ -21,10 +21,20 @@ const config = {
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || '',
     embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
+    chatModel: process.env.GEMINI_CHAT_MODEL || 'gemini-1.5-flash',
     dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '768', 10),
     enablePseudoEmbeddingFallback:
       process.env.NODE_ENV !== 'production' &&
       process.env.ENABLE_PSEUDO_EMBEDDING_FALLBACK === 'true',
+  },
+  rag: {
+    defaultTopK: parseInt(process.env.RAG_DEFAULT_TOP_K || '5', 10),
+    maxTopK: parseInt(process.env.RAG_MAX_TOP_K || '10', 10),
+    defaultScoreThreshold: parseFloat(process.env.RAG_DEFAULT_SCORE_THRESHOLD || '0.1'),
+    maxContextChunks: parseInt(process.env.RAG_MAX_CONTEXT_CHUNKS || '8', 10),
+    maxContextChars: parseInt(process.env.RAG_MAX_CONTEXT_CHARS || '30000', 10),
+    maxHistoryMessages: parseInt(process.env.RAG_MAX_HISTORY_MESSAGES || '8', 10),
+    maxChatMessageLength: parseInt(process.env.MAX_CHAT_MESSAGE_LENGTH || '5000', 10),
   },
   search: {
     defaultTopK: parseInt(process.env.DEFAULT_VECTOR_TOP_K || '5', 10),
