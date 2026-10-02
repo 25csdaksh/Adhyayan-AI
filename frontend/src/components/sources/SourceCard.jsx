@@ -3,80 +3,102 @@ import {
   FileText,
   Globe,
   FileType,
+  AlignLeft,
   Loader2,
-  CheckCircle2,
-  AlertCircle,
-  MoreVertical,
   Trash2,
   ExternalLink,
-  Eye,
-  RefreshCw,
+  MoreVertical,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { Dropdown, DropdownItem, DropdownDivider } from '../ui/Dropdown';
+import { formatBytes, formatRelativeDate } from '../../utils/formatters';
 
 export const SourceCard = ({
   source,
   onRemove,
-  onViewSnippet,
+  onViewDetails,
   isSelected = false,
   onSelect,
 }) => {
-  const getTypeIcon = () => {
-    switch (source.type) {
+  const type = source.sourceType || source.type || 'txt';
+
+  const getTypeConfig = () => {
+    switch (type) {
       case 'pdf':
-        return <FileText className="w-4 h-4 text-rose-600" />;
+        return {
+          icon: <FileText className="w-4 h-4 text-rose-600" />,
+          bg: 'bg-rose-50 border-rose-100',
+          label: 'PDF',
+        };
       case 'docx':
-        return <FileType className="w-4 h-4 text-blue-600" />;
+        return {
+          icon: <FileType className="w-4 h-4 text-blue-600" />,
+          bg: 'bg-blue-50 border-blue-100',
+          label: 'Word Document',
+        };
+      case 'url':
       case 'web':
-        return <Globe className="w-4 h-4 text-emerald-600" />;
+        return {
+          icon: <Globe className="w-4 h-4 text-emerald-600" />,
+          bg: 'bg-emerald-50 border-emerald-100',
+          label: 'Web Page',
+        };
+      case 'text':
+        return {
+          icon: <AlignLeft className="w-4 h-4 text-purple-600" />,
+          bg: 'bg-purple-50 border-purple-100',
+          label: 'Plain Text',
+        };
       case 'txt':
       default:
-        return <FileText className="w-4 h-4 text-amber-600" />;
+        return {
+          icon: <FileText className="w-4 h-4 text-amber-600" />,
+          bg: 'bg-amber-50 border-amber-100',
+          label: 'Text File',
+        };
     }
   };
 
-  const getTypeBg = () => {
-    switch (source.type) {
-      case 'pdf':
-        return 'bg-rose-50 border-rose-100';
-      case 'docx':
-        return 'bg-blue-50 border-blue-100';
-      case 'web':
-        return 'bg-emerald-50 border-emerald-100';
-      case 'txt':
-      default:
-        return 'bg-amber-50 border-amber-100';
-    }
-  };
+  const { icon, bg, label } = getTypeConfig();
 
   const renderStatus = () => {
     switch (source.status) {
       case 'ready':
-        return <span className="text-[11px] text-[#6B756F]">{source.pages ? `${source.pages} pgs` : source.size}</span>;
+        return (
+          <Badge variant="forest" size="sm" dot>
+            Ready
+          </Badge>
+        );
       case 'processing':
         return (
           <Badge variant="amber" size="sm" dot>
             <Loader2 className="w-3 h-3 animate-spin inline-block -mt-0.5 mr-1" />
-            Indexing
-          </Badge>
-        );
-      case 'uploading':
-        return (
-          <Badge variant="blue" size="sm" dot>
-            Uploading
+            Processing
           </Badge>
         );
       case 'failed':
         return (
           <Badge variant="rose" size="sm" dot>
+            <AlertCircle className="w-3 h-3 inline-block -mt-0.5 mr-1" />
             Failed
           </Badge>
         );
+      case 'pending':
       default:
-        return null;
+        return (
+          <Badge variant="neutral" size="sm" dot>
+            <Clock className="w-2.5 h-2.5 inline-block -mt-0.5 mr-1 text-[#8E9993]" />
+            Pending
+          </Badge>
+        );
     }
   };
+
+  const formattedSize = source.fileSize ? formatBytes(source.fileSize) : source.size || null;
+  const relativeDate = formatRelativeDate(source.createdAt);
 
   return (
     <div
@@ -87,17 +109,32 @@ export const SourceCard = ({
           : 'bg-white border-[#E2E7E3] hover:border-[#BAC5C0] hover:bg-[#FAFBF9]'}`}
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${getTypeBg()}`}>
-          {getTypeIcon()}
+        <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${bg}`}>
+          {icon}
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-[#17211D] truncate group-hover:text-[#1F5E4B] transition-colors" title={source.title}>
+          <p
+            className="text-xs font-semibold text-[#17211D] truncate group-hover:text-[#1F5E4B] transition-colors"
+            title={source.title}
+          >
             {source.title}
           </p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[11px] font-mono text-[#8E9993] uppercase">{source.type}</span>
-            <span className="text-[11px] text-[#8E9993]">•</span>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span className="text-[10px] font-medium text-[#8E9993]">{label}</span>
+            {formattedSize && (
+              <>
+                <span className="text-[10px] text-[#8E9993]">•</span>
+                <span className="text-[10px] text-[#6B756F]">{formattedSize}</span>
+              </>
+            )}
+            {relativeDate && (
+              <>
+                <span className="text-[10px] text-[#8E9993]">•</span>
+                <span className="text-[10px] text-[#8E9993]">{relativeDate}</span>
+              </>
+            )}
+            <span className="text-[10px] text-[#8E9993]">•</span>
             {renderStatus()}
           </div>
         </div>
@@ -115,21 +152,28 @@ export const SourceCard = ({
             </button>
           }
         >
-          {source.snippet && (
-            <DropdownItem icon={Eye} onClick={() => onViewSnippet?.(source)}>
-              View Summary
+          {source.sourceUrl && (
+            <DropdownItem
+              icon={ExternalLink}
+              onClick={() => window.open(source.sourceUrl, '_blank', 'noopener,noreferrer')}
+            >
+              Open Link
             </DropdownItem>
           )}
-          {source.type === 'web' && (
-            <DropdownItem icon={ExternalLink} onClick={() => window.open(source.title, '_blank')}>
-              Open URL
+          {source.storageUrl && (
+            <DropdownItem
+              icon={ExternalLink}
+              onClick={() => window.open(source.storageUrl, '_blank', 'noopener,noreferrer')}
+            >
+              View File
             </DropdownItem>
           )}
-          <DropdownItem icon={RefreshCw}>
-            Re-index Source
-          </DropdownItem>
           <DropdownDivider />
-          <DropdownItem icon={Trash2} danger onClick={() => onRemove?.(source.id)}>
+          <DropdownItem
+            icon={Trash2}
+            danger
+            onClick={() => onRemove?.(source)}
+          >
             Remove Source
           </DropdownItem>
         </Dropdown>

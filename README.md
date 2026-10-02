@@ -4,13 +4,59 @@
 
 ---
 
-## 📌 Status: Phase 04 Completed (Notebook Management)
+## 📌 Status: Phase 05 Completed (Document & Source Management)
 
 - **Phase 01:** Foundation, Monorepo, Express Backend, MongoDB, CORS, `/api/health` *(Verified)*
 - **Phase 02:** Light-First Academic UI/UX, Design System, Landing Page, Dashboard, 3-Panel Workspace, Chat UI, Source Management, Settings, Profile *(Verified)*
 - **Phase 03:** Secure JWT & Bcrypt Authentication, User Registration, Login, Protected Routes, Session Management & Profile Update *(Verified)*
 - **Phase 04:** Authenticated Notebooks CRUD, Strict User Isolation, Search & Pagination *(Verified)*
-- **Phase 05:** Vector Search & Multi-Format Document Grounding *(Upcoming)*
+- **Phase 05:** Document & Multi-Format Source Management (PDF, DOCX, TXT, Web URL, Plain Text), Cloudinary Storage *(Verified)*
+- **Phase 06:** Document Parsing, Text Extraction, Chunking & Embeddings *(Upcoming)*
+
+---
+
+## 📄 Document & Source Management (Phase 05)
+
+### Supported Source Types
+- **PDF Documents (`pdf`):** Uploaded via multipart form-data and securely stored in Cloudinary.
+- **Word Documents (`docx`):** Standard `.docx` and `.doc` files uploaded and stored in Cloudinary.
+- **Text Files (`txt`):** Plain text documents uploaded and stored in Cloudinary.
+- **Plain Text Notes (`text`):** User-typed notes persisted directly as raw text.
+- **Web Pages (`url`):** Registered HTTP/HTTPS URLs ready for ingestion.
+
+### Data Model & Indexing (`backend/src/models/Document.js`)
+- `notebookId`: ObjectId referencing `Notebook`, indexed, required.
+- `title`: String (1–200 characters), trimmed, required.
+- `sourceType`: Enum `['pdf', 'docx', 'txt', 'text', 'url']`, required.
+- `originalName`: String.
+- `mimeType`: String.
+- `fileSize`: Number (in bytes).
+- `storageUrl`: String (Cloudinary secure delivery URL).
+- `storagePublicId`: String (Cloudinary unique asset identifier).
+- `sourceUrl`: String (for web sources).
+- `rawText`: String (for plain text notes; remains empty for files in Phase 05).
+- `status`: Enum `['pending', 'processing', 'ready', 'failed']` (default: `'pending'`).
+- `processingError`: String.
+- `metadata`: Mixed object for extensible metadata.
+- **Compound Indexes:**
+  - `{ notebookId: 1, createdAt: -1 }`
+  - `{ notebookId: 1, status: 1 }`
+
+### Cloudinary Storage & Upload Middleware
+- Uploads are processed in-memory via `multer.memoryStorage()` and streamed directly to Cloudinary (`studylm/notebooks/:notebookId/sources/`).
+- Enforces strict file type checks and a configurable maximum file size (`MAX_FILE_SIZE_MB=20`).
+- Prohibits executable/script files (`.exe`, `.sh`, `.bat`, `.js`, `.php`).
+- Automatic Cloudinary asset cleanup occurs when deleting sources or cascade-deleting notebooks.
+
+### Document API Endpoints
+
+| Method | Endpoint | Protection | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/notebooks/:notebookId/documents` | Bearer Token | Upload file (multipart) or create URL/Text source (201) |
+| `GET` | `/api/notebooks/:notebookId/documents` | Bearer Token | Fetch notebook sources with pagination & search (200) |
+| `GET` | `/api/notebooks/:notebookId/documents/:documentId` | Bearer Token | Fetch single source scoped to user's notebook (200) |
+| `PATCH`| `/api/notebooks/:notebookId/documents/:documentId` | Bearer Token | Update document title with validation (200) |
+| `DELETE`| `/api/notebooks/:notebookId/documents/:documentId` | Bearer Token | Delete document & Cloudinary asset (200) |
 
 ---
 

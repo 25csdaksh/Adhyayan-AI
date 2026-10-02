@@ -176,8 +176,11 @@ const updateNotebook = asyncHandler(async (req, res) => {
   );
 });
 
+const Document = require('../models/Document');
+const { deleteAsset } = require('../config/cloudinary');
+
 /**
- * Delete a notebook
+ * Delete a notebook (cascades document and Cloudinary asset deletions)
  * DELETE /api/notebooks/:id
  */
 const deleteNotebook = asyncHandler(async (req, res) => {
@@ -191,6 +194,20 @@ const deleteNotebook = asyncHandler(async (req, res) => {
 
   if (!deletedNotebook) {
     throw ApiError.notFound('Notebook not found or you do not have permission to delete it.');
+  }
+
+  // Find all child documents to clean up Cloudinary assets
+  try {
+    const childDocuments = await Document.find({ notebookId: id });
+    for (const doc of childDocuments) {
+      if (doc.storagePublicId) {
+        await deleteAsset(doc.storagePublicId, 'raw');
+      }
+    }
+    // Remove all child documents from MongoDB
+    await Document.deleteMany({ notebookId: id });
+  } catch (cleanupErr) {
+    console.warn(`[Notebook Cleanup Warning] Error cleaning child documents for notebook ${id}:`, cleanupErr.message);
   }
 
   return ApiResponse.success(

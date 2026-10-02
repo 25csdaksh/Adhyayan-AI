@@ -37,6 +37,10 @@ import { notebookService } from '../api/notebookService';
 import { useToast } from '../context/ToastContext';
 import { EmptyState } from '../components/ui/EmptyState';
 
+import { documentService } from '../api/documentService';
+import { DeleteSourceModal } from '../components/sources/DeleteSourceModal';
+import { Skeleton } from '../components/ui/Skeleton';
+
 export const NotebookWorkspacePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -44,10 +48,13 @@ export const NotebookWorkspacePage = () => {
 
   const [notebook, setNotebook] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sourcesLoading, setSourcesLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sources, setSources] = useState([]);
   const [messages, setMessages] = useState(MOCK_CHAT_CONVERSATION);
   const [addSourceOpen, setAddSourceOpen] = useState(false);
+  const [sourceToDelete, setSourceToDelete] = useState(null);
+  const [isDeletingSource, setIsDeletingSource] = useState(false);
   const [selectedSourceSnippet, setSelectedSourceSnippet] = useState(null);
 
   // Responsive workspace tab state for tablet & mobile
@@ -57,55 +64,73 @@ export const NotebookWorkspacePage = () => {
 
   const chatEndRef = useRef(null);
 
+  const fetchWorkspaceData = async (isMounted) => {
+    setLoading(true);
+    setSourcesLoading(true);
+    setError(null);
+    try {
+      const [nbRes, docsRes] = await Promise.all([
+        notebookService.getNotebook(id),
+        documentService.getDocuments(id),
+      ]);
+
+      if (isMounted) {
+        if (nbRes?.data?.notebook) {
+          setNotebook(nbRes.data.notebook);
+        } else {
+          setError('Notebook not found or you do not have permission to view it.');
+        }
+
+        if (docsRes?.data?.documents) {
+          setSources(docsRes.data.documents);
+        }
+      }
+    } catch (err) {
+      if (isMounted) {
+        const errMsg = err?.response?.data?.message || err?.message || 'Failed to load workspace. Please try again.';
+        setError(errMsg);
+      }
+    } finally {
+      if (isMounted) {
+        setLoading(false);
+        setSourcesLoading(false);
+      }
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
-    const fetchNotebook = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await notebookService.getNotebook(id);
-        if (isMounted) {
-          if (response?.data?.notebook) {
-            setNotebook(response.data.notebook);
-          } else {
-            setError('Notebook not found or you do not have permission to view it.');
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          const errMsg = err?.response?.data?.message || 'Failed to load notebook. Please try again.';
-          setError(errMsg);
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
     if (id) {
-      fetchNotebook();
+      fetchWorkspaceData(isMounted);
     }
     return () => {
       isMounted = false;
     };
   }, [id]);
 
-  const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const handleAddSourceSuccess = (newDoc) => {
+    if (newDoc) {
+      setSources((prev) => [newDoc, ...prev]);
+    }
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const handleAddSource = (newSource) => {
-    setSources((prev) => [newSource, ...prev]);
-    toast.success(`Source "${newSource.title}" added to grounding index`, 'Source Added');
+  const handleDeleteSourceClick = (source) => {
+    setSourceToDelete(source);
   };
 
-  const handleRemoveSource = (sourceId) => {
-    const target = sources.find((s) => s.id === sourceId);
-    setSources((prev) => prev.filter((s) => s.id !== sourceId));
-    toast.info(`Removed source "${target?.title || ''}"`, 'Source Removed');
+  const handleConfirmDeleteSource = async (source) => {
+    if (!source || !source._id) return;
+    setIsDeletingSource(true);
+    try {
+      await documentService.deleteDocument(id, source._id);
+      setSources((prev) => prev.filter((s) => s._id !== source._id));
+      toast.success(`Removed source "${source.title}"`, 'Source Deleted');
+      setSourceToDelete(null);
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete source', 'Delete Error');
+    } finally {
+      setIsDeletingSource(false);
+    }
   };
 
   const handleSendMessage = (userQuery) => {
@@ -322,12 +347,18 @@ export const NotebookWorkspacePage = () => {
 
           {/* Source Cards List */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
-            {sources.length > 0 ? (
+            {sourcesLoading ? (
+              <div className="space-y-2.5">
+                <Skeleton className="h-16 w-full rounded-xl" />
+                <Skeleton className="h-16 w-full rounded-xl" />
+                <Skeleton className="h-16 w-full rounded-xl" />
+              </div>
+            ) : sources.length > 0 ? (
               sources.map((source) => (
                 <SourceCard
-                  key={source.id}
+                  key={source._id || source.id}
                   source={source}
-                  onRemove={handleRemoveSource}
+                  onRemove={handleDeleteSourceClick}
                   onViewSnippet={(s) => setSelectedSourceSnippet(s)}
                 />
               ))
@@ -338,7 +369,7 @@ export const NotebookWorkspacePage = () => {
                 </div>
                 <p className="font-semibold text-sm text-[#17211D]">No sources yet</p>
                 <p className="text-xs text-[#6B756F] leading-relaxed max-w-xs mx-auto">
-                  Add your first source to start building this notebook.
+                  Add PDFs, documents, notes, or web sources to start building your research notebook.
                 </p>
                 <Button
                   variant="primary"
@@ -355,8 +386,8 @@ export const NotebookWorkspacePage = () => {
 
           {/* Sources Footer Summary */}
           <div className="p-3 bg-[#FAFBF9] border-t border-[#EDF1EE] text-[11px] text-[#6B756F] flex items-center justify-between shrink-0">
-            <span>Vector Index: Live</span>
-            <span className="text-[#1F5E4B] font-semibold">Ready for Q&amp;A</span>
+            <span>Storage: Cloudinary</span>
+            <span className="text-[#1F5E4B] font-semibold">{sources.length} Active</span>
           </div>
         </div>
 
@@ -418,7 +449,17 @@ export const NotebookWorkspacePage = () => {
       <AddSourceModal
         isOpen={addSourceOpen}
         onClose={() => setAddSourceOpen(false)}
-        onAddSource={handleAddSource}
+        notebookId={id}
+        onSourceAdded={handleAddSourceSuccess}
+      />
+
+      {/* Delete Source Confirmation Modal */}
+      <DeleteSourceModal
+        isOpen={Boolean(sourceToDelete)}
+        onClose={() => setSourceToDelete(null)}
+        onConfirm={handleConfirmDeleteSource}
+        source={sourceToDelete}
+        isDeleting={isDeletingSource}
       />
 
       {/* Source Excerpt / Summary Modal */}

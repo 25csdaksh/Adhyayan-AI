@@ -12,6 +12,12 @@ const config = {
   mongoUri: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/studylm',
   jwtSecret: process.env.JWT_SECRET || 'studylm_super_secure_jwt_secret_development_key_2026',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    apiKey: process.env.CLOUDINARY_API_KEY || '',
+    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+  },
+  maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || '20', 10),
 };
 
 // Validate critical configurations
