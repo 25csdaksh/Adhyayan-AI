@@ -1,6 +1,20 @@
 import apiClient from './apiClient';
 
 /**
+ * Helper to extract studyTool payload from various response structures
+ */
+const extractStudyTool = (res) => {
+  return res?.data?.studyTool || res?.studyTool || res?.data || res;
+};
+
+/**
+ * Helper to extract list payload
+ */
+const extractStudyToolData = (res) => {
+  return res?.data || res;
+};
+
+/**
  * Generate a grounded summary for a notebook
  * @param {string} notebookId
  * @param {Object} params
@@ -12,7 +26,7 @@ export const generateSummary = async (notebookId, { mode = 'detailed', topic = '
     mode,
     topic,
   });
-  return response.data?.data?.studyTool;
+  return extractStudyTool(response);
 };
 
 /**
@@ -32,7 +46,7 @@ export const generateFlashcards = async (
     difficulty,
     topic,
   });
-  return response.data?.data?.studyTool;
+  return extractStudyTool(response);
 };
 
 /**
@@ -52,7 +66,7 @@ export const generateQuiz = async (
     difficulty,
     topic,
   });
-  return response.data?.data?.studyTool;
+  return extractStudyTool(response);
 };
 
 /**
@@ -65,7 +79,7 @@ export const generateMindMap = async (notebookId, { topic = '' } = {}) => {
   const response = await apiClient.post(`/notebooks/${notebookId}/study-tools/mindmap`, {
     topic,
   });
-  return response.data?.data?.studyTool;
+  return extractStudyTool(response);
 };
 
 /**
@@ -83,7 +97,7 @@ export const getStudyTools = async (notebookId, { toolType, page = 1, limit = 20
   const response = await apiClient.get(`/notebooks/${notebookId}/study-tools`, {
     params,
   });
-  return response.data?.data;
+  return extractStudyToolData(response);
 };
 
 /**
@@ -93,7 +107,7 @@ export const getStudyTools = async (notebookId, { toolType, page = 1, limit = 20
  */
 export const getStudyToolById = async (notebookId, studyToolId) => {
   const response = await apiClient.get(`/notebooks/${notebookId}/study-tools/${studyToolId}`);
-  return response.data?.data?.studyTool;
+  return extractStudyTool(response);
 };
 
 /**
@@ -103,5 +117,17 @@ export const getStudyToolById = async (notebookId, studyToolId) => {
  */
 export const deleteStudyTool = async (notebookId, studyToolId) => {
   const response = await apiClient.delete(`/notebooks/${notebookId}/study-tools/${studyToolId}`);
-  return response.data?.data;
+  return extractStudyToolData(response);
 };
+
+export const studyToolService = {
+  generateSummary,
+  generateFlashcards,
+  generateQuiz,
+  generateMindMap,
+  getStudyTools,
+  getStudyToolById,
+  deleteStudyTool,
+};
+
+export default studyToolService;
