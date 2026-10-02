@@ -177,10 +177,11 @@ const updateNotebook = asyncHandler(async (req, res) => {
 });
 
 const Document = require('../models/Document');
+const Chunk = require('../models/Chunk');
 const { deleteAsset } = require('../config/cloudinary');
 
 /**
- * Delete a notebook (cascades document and Cloudinary asset deletions)
+ * Delete a notebook (cascades document, chunk, and Cloudinary asset deletions)
  * DELETE /api/notebooks/:id
  */
 const deleteNotebook = asyncHandler(async (req, res) => {
@@ -204,8 +205,9 @@ const deleteNotebook = asyncHandler(async (req, res) => {
         await deleteAsset(doc.storagePublicId, 'raw');
       }
     }
-    // Remove all child documents from MongoDB
+    // Remove all child documents and chunks from MongoDB
     await Document.deleteMany({ notebookId: id });
+    await Chunk.deleteMany({ notebookId: id });
   } catch (cleanupErr) {
     console.warn(`[Notebook Cleanup Warning] Error cleaning child documents for notebook ${id}:`, cleanupErr.message);
   }

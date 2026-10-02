@@ -3,6 +3,9 @@ const {
   createDocument,
   getDocuments,
   getDocumentById,
+  getDocumentStatus,
+  reprocessDocument,
+  getDocumentChunks,
   updateDocument,
   deleteDocument,
 } = require('../controllers/document.controller');
@@ -24,5 +27,9 @@ router
   .get(getDocumentById)
   .patch(updateDocument)
   .delete(deleteDocument);
+
+router.get('/:documentId/status', getDocumentStatus);
+router.post('/:documentId/process', reprocessDocument);
+router.get('/:documentId/chunks', getDocumentChunks);
 
 module.exports = router;

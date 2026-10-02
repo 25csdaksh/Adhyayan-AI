@@ -4,14 +4,50 @@
 
 ---
 
-## 📌 Status: Phase 05 Completed (Document & Source Management)
+## 📌 Status: Phase 06 Completed (Document Processing Pipeline)
 
 - **Phase 01:** Foundation, Monorepo, Express Backend, MongoDB, CORS, `/api/health` *(Verified)*
 - **Phase 02:** Light-First Academic UI/UX, Design System, Landing Page, Dashboard, 3-Panel Workspace, Chat UI, Source Management, Settings, Profile *(Verified)*
 - **Phase 03:** Secure JWT & Bcrypt Authentication, User Registration, Login, Protected Routes, Session Management & Profile Update *(Verified)*
 - **Phase 04:** Authenticated Notebooks CRUD, Strict User Isolation, Search & Pagination *(Verified)*
 - **Phase 05:** Document & Multi-Format Source Management (PDF, DOCX, TXT, Web URL, Plain Text), Cloudinary Storage *(Verified)*
-- **Phase 06:** Document Parsing, Text Extraction, Chunking & Embeddings *(Upcoming)*
+- **Phase 06:** Document Processing Pipeline, Text Extraction, Cleaning & Deterministic Chunking *(Verified)*
+- **Phase 07:** Vector Search & Multi-Format Document Grounding *(Upcoming)*
+
+---
+
+## ⚙️ Document Processing Pipeline (Phase 06)
+
+### Processing Architecture (`backend/src/services/document/`)
+- **PDF Processor (`pdfProcessor.js`):** Extracts text using `pdf-parse`, preserving explicit page boundaries (`pageNumber`, `pageStart`, `pageEnd`) for citation accuracy.
+- **DOCX Processor (`docxProcessor.js`):** Extracts semantic paragraphs, headings, and tables using `mammoth`.
+- **TXT Processor (`txtProcessor.js`):** Decodes UTF-8 buffers, strips BOM, and normalizes line endings.
+- **Plain Text Processor:** Formats and cleans raw user-submitted notes.
+- **URL Processor (`urlProcessor.js`):** HTML content scraper with strict SSRF protection (blocks loopback, private IPv4/IPv6, link-local, cloud metadata IPs). Cleans semantic article/main text using `cheerio`.
+- **Text Cleaner (`textCleaner.js`):** Deterministic Unicode normalization (NFKC), newline consolidation, and whitespace trimming.
+- **Chunker (`chunker.js`):** Segments documents into ~800–1200 token passages (~3200–4800 chars) with ~100–150 token overlap (~400–600 chars), preserving page ranges for citations.
+
+### Chunk Data Model (`backend/src/models/Chunk.js`)
+- `documentId`: ObjectId referencing `Document`, required, indexed.
+- `notebookId`: ObjectId referencing `Notebook`, required, indexed.
+- `chunkIndex`: Number (deterministic 0-based index).
+- `text`: String (clean chunk text).
+- `tokenCount`: Number (estimated tokens).
+- `charCount`: Number (character count).
+- `pageNumber`: Number (exact page for single-page chunks or null).
+- `pageStart`: Number (starting page for multi-page/overlapping chunks).
+- `pageEnd`: Number (ending page for multi-page/overlapping chunks).
+- `metadata`: Mixed object.
+- **Compound Indexes:**
+  - `{ documentId: 1, chunkIndex: 1 }` (unique)
+  - `{ notebookId: 1 }`
+
+### Processing Lifecycle & Status Polling
+- **Lifecycle:** `pending` ➔ `processing` ➔ `ready` (or `failed`).
+- **Idempotency:** Re-processing a document deletes existing chunks before inserting new chunks, preventing duplicates.
+- **Status API:** `GET /api/notebooks/:notebookId/documents/:documentId/status`
+- **Reprocess API:** `POST /api/notebooks/:notebookId/documents/:documentId/process`
+- **Chunks API:** `GET /api/notebooks/:notebookId/documents/:documentId/chunks`
 
 ---
 

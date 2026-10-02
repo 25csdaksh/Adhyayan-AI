@@ -108,6 +108,28 @@ export const NotebookWorkspacePage = () => {
     };
   }, [id]);
 
+  // Periodic polling when any source is pending or processing
+  const hasProcessingSources = sources.some(
+    (s) => s.status === 'pending' || s.status === 'processing'
+  );
+
+  useEffect(() => {
+    if (!id || !hasProcessingSources) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const docsRes = await documentService.getDocuments(id);
+        if (docsRes?.data?.documents) {
+          setSources(docsRes.data.documents);
+        }
+      } catch {
+        // Silently ignore polling errors
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [id, hasProcessingSources]);
+
   const handleAddSourceSuccess = (newDoc) => {
     if (newDoc) {
       setSources((prev) => [newDoc, ...prev]);
@@ -130,6 +152,19 @@ export const NotebookWorkspacePage = () => {
       toast.error(err.message || 'Failed to delete source', 'Delete Error');
     } finally {
       setIsDeletingSource(false);
+    }
+  };
+
+  const handleReprocessSource = async (source) => {
+    if (!source || !source._id) return;
+    try {
+      await documentService.reprocessDocument(id, source._id);
+      setSources((prev) =>
+        prev.map((s) => (s._id === source._id ? { ...s, status: 'processing', processingError: '' } : s))
+      );
+      toast.info(`Processing restarted for "${source.title}"`, 'Reprocessing');
+    } catch (err) {
+      toast.error(err.message || 'Failed to restart processing', 'Error');
     }
   };
 
@@ -359,6 +394,7 @@ export const NotebookWorkspacePage = () => {
                   key={source._id || source.id}
                   source={source}
                   onRemove={handleDeleteSourceClick}
+                  onReprocess={handleReprocessSource}
                   onViewSnippet={(s) => setSelectedSourceSnippet(s)}
                 />
               ))

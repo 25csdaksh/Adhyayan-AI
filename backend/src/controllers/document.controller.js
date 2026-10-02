@@ -2,7 +2,9 @@ const mongoose = require('mongoose');
 const path = require('path');
 const Document = require('../models/Document');
 const Notebook = require('../models/Notebook');
+const Chunk = require('../models/Chunk');
 const { uploadStream, deleteAsset } = require('../config/cloudinary');
+const { processDocument, triggerAsyncProcessing } = require('../services/document/documentProcessor');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiResponse = require('../utils/apiResponse');
 const ApiError = require('../utils/apiError');
@@ -87,12 +89,14 @@ const createDocument = asyncHandler(async (req, res) => {
         storageUrl: uploadResult.secure_url || '',
         storagePublicId: uploadResult.public_id || '',
         status: 'pending',
-        rawText: '', // No extraction in Phase 05
+        rawText: '',
       });
+
+      // Trigger asynchronous processing pipeline
+      triggerAsyncProcessing(document._id, { directBuffer: req.file.buffer });
 
       return ApiResponse.success(res, { document }, 'Document uploaded successfully', 201);
     } catch (dbErr) {
-      // Clean up uploaded Cloudinary asset if DB write fails
       if (uploadResult?.public_id) {
         await deleteAsset(uploadResult.public_id, 'raw');
       }
@@ -124,6 +128,9 @@ const createDocument = asyncHandler(async (req, res) => {
       fileSize: Buffer.byteLength(trimmedText, 'utf8'),
       status: 'pending',
     });
+
+    // Trigger asynchronous processing pipeline
+    triggerAsyncProcessing(document._id);
 
     return ApiResponse.success(res, { document }, 'Text source created successfully', 201);
   }
@@ -157,6 +164,9 @@ const createDocument = asyncHandler(async (req, res) => {
       status: 'pending',
     });
 
+    // Trigger asynchronous processing pipeline
+    triggerAsyncProcessing(document._id);
+
     return ApiResponse.success(res, { document }, 'URL source created successfully', 201);
   }
 
@@ -188,7 +198,12 @@ const getDocuments = asyncHandler(async (req, res) => {
   }
 
   const [documents, total] = await Promise.all([
-    Document.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    Document.find(query)
+      .select('-rawText') // Avoid loading heavy rawText in list queries
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
     Document.countDocuments(query),
   ]);
 
@@ -236,6 +251,109 @@ const getDocumentById = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc Get document processing status
+ * @route GET /api/notebooks/:notebookId/documents/:documentId/status
+ * @access Private (Authenticated & Notebook Owner)
+ */
+const getDocumentStatus = asyncHandler(async (req, res) => {
+  const { notebookId, documentId } = req.params;
+  const notebook = await verifyNotebookOwnership(notebookId, req.user._id);
+
+  if (!mongoose.Types.ObjectId.isValid(documentId)) {
+    throw new ApiError(400, 'Invalid document ID format');
+  }
+
+  const document = await Document.findOne({
+    _id: documentId,
+    notebookId: notebook._id,
+  })
+    .select('status processingError metadata title sourceType updatedAt')
+    .lean();
+
+  if (!document) {
+    throw new ApiError(404, 'Document not found');
+  }
+
+  return ApiResponse.success(res, { document }, 'Document status retrieved', 200);
+});
+
+/**
+ * @desc Manually retry / re-process document
+ * @route POST /api/notebooks/:notebookId/documents/:documentId/process
+ * @access Private (Authenticated & Notebook Owner)
+ */
+const reprocessDocument = asyncHandler(async (req, res) => {
+  const { notebookId, documentId } = req.params;
+  const notebook = await verifyNotebookOwnership(notebookId, req.user._id);
+
+  if (!mongoose.Types.ObjectId.isValid(documentId)) {
+    throw new ApiError(400, 'Invalid document ID format');
+  }
+
+  const document = await Document.findOne({
+    _id: documentId,
+    notebookId: notebook._id,
+  });
+
+  if (!document) {
+    throw new ApiError(404, 'Document not found');
+  }
+
+  triggerAsyncProcessing(document._id);
+
+  return ApiResponse.success(
+    res,
+    { documentId: document._id, status: 'processing' },
+    'Document processing initiated',
+    200
+  );
+});
+
+/**
+ * @desc Get extracted chunks for a document
+ * @route GET /api/notebooks/:notebookId/documents/:documentId/chunks
+ * @access Private (Authenticated & Notebook Owner)
+ */
+const getDocumentChunks = asyncHandler(async (req, res) => {
+  const { notebookId, documentId } = req.params;
+  const notebook = await verifyNotebookOwnership(notebookId, req.user._id);
+
+  if (!mongoose.Types.ObjectId.isValid(documentId)) {
+    throw new ApiError(400, 'Invalid document ID format');
+  }
+
+  const page = Math.max(1, parseInt(req.query.page || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || '50', 10)));
+  const skip = (page - 1) * limit;
+
+  const [chunks, total] = await Promise.all([
+    Chunk.find({ documentId, notebookId: notebook._id })
+      .sort({ chunkIndex: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Chunk.countDocuments({ documentId, notebookId: notebook._id }),
+  ]);
+
+  const totalPages = Math.ceil(total / limit) || 1;
+
+  return ApiResponse.success(
+    res,
+    {
+      chunks,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    },
+    'Document chunks fetched successfully',
+    200
+  );
+});
+
+/**
  * @desc Update document metadata (title)
  * @route PATCH /api/notebooks/:notebookId/documents/:documentId
  * @access Private (Authenticated & Notebook Owner)
@@ -272,7 +390,7 @@ const updateDocument = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc Delete document and its Cloudinary storage asset
+ * @desc Delete document, its Chunks, and its Cloudinary storage asset
  * @route DELETE /api/notebooks/:notebookId/documents/:documentId
  * @access Private (Authenticated & Notebook Owner)
  */
@@ -293,11 +411,15 @@ const deleteDocument = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Document not found');
   }
 
-  // Delete Cloudinary asset if one exists
+  // 1. Delete associated Chunks to avoid orphaned data
+  await Chunk.deleteMany({ documentId: document._id });
+
+  // 2. Delete Cloudinary asset if one exists
   if (document.storagePublicId) {
     await deleteAsset(document.storagePublicId, 'raw');
   }
 
+  // 3. Delete Document record
   await Document.findByIdAndDelete(document._id);
 
   return ApiResponse.success(res, null, 'Document deleted successfully', 200);
@@ -307,6 +429,9 @@ module.exports = {
   createDocument,
   getDocuments,
   getDocumentById,
+  getDocumentStatus,
+  reprocessDocument,
+  getDocumentChunks,
   updateDocument,
   deleteDocument,
   verifyNotebookOwnership,

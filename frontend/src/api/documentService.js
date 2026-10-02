@@ -61,6 +61,34 @@ export const documentService = {
   },
 
   /**
+   * Get document processing status
+   * @param {string} notebookId
+   * @param {string} documentId
+   */
+  async getDocumentStatus(notebookId, documentId) {
+    return apiClient.get(`/notebooks/${notebookId}/documents/${documentId}/status`);
+  },
+
+  /**
+   * Trigger re-processing for a document
+   * @param {string} notebookId
+   * @param {string} documentId
+   */
+  async reprocessDocument(notebookId, documentId) {
+    return apiClient.post(`/notebooks/${notebookId}/documents/${documentId}/process`);
+  },
+
+  /**
+   * Get extracted chunks for a document
+   * @param {string} notebookId
+   * @param {string} documentId
+   * @param {Object} [params] - page, limit
+   */
+  async getDocumentChunks(notebookId, documentId, params = {}) {
+    return apiClient.get(`/notebooks/${notebookId}/documents/${documentId}/chunks`, { params });
+  },
+
+  /**
    * Update document title or metadata
    * @param {string} notebookId
    * @param {string} documentId

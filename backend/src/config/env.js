@@ -18,6 +18,12 @@ const config = {
     apiSecret: process.env.CLOUDINARY_API_SECRET || '',
   },
   maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || '20', 10),
+  processing: {
+    maxTextChars: parseInt(process.env.MAX_TEXT_CHARS || '2000000', 10),
+    maxChunksPerDocument: parseInt(process.env.MAX_CHUNKS_PER_DOCUMENT || '1000', 10),
+    urlFetchTimeoutMs: parseInt(process.env.URL_FETCH_TIMEOUT_MS || '15000', 10),
+    maxUrlResponseMb: parseInt(process.env.MAX_URL_RESPONSE_MB || '5', 10),
+  },
 };
 
 // Validate critical configurations
