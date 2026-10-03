@@ -3,18 +3,29 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { AppNavbar } from './AppNavbar';
 import { CreateNotebookModal } from '../notebooks/CreateNotebookModal';
+import { notebookService } from '../../api/notebookService';
 import { useToast } from '../../context/ToastContext';
 
 export const AppLayout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const toast = useToast();
   const navigate = useNavigate();
 
-  const handleCreateNotebook = (newNotebook) => {
-    toast.success(`Notebook "${newNotebook.title}" initialized!`, 'Success');
-    setCreateModalOpen(false);
-    navigate(`/notebooks/${newNotebook.id}`);
+  const handleCreateNotebook = async (data) => {
+    setIsCreating(true);
+    try {
+      const res = await notebookService.createNotebook(data);
+      const newNotebook = res.data.notebook;
+      toast.success(`Notebook "${newNotebook.title}" initialized!`, 'Success');
+      setCreateModalOpen(false);
+      navigate(`/notebooks/${newNotebook._id || newNotebook.id}`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to create notebook');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -43,6 +54,7 @@ export const AppLayout = () => {
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         onCreate={handleCreateNotebook}
+        isCreating={isCreating}
       />
     </div>
   );
