@@ -141,27 +141,29 @@ async function executeAdvancedResearch({
 
   // 7. Synthesis & Report Generation
   let synthesis = {};
-  let modelName = 'gemini-1.5-flash';
+  const candidateModels = Array.from(
+    new Set([
+      config.gemini?.chatModel || 'gemini-3.5-flash',
+      'gemini-3.5-flash',
+      'gemini-flash-latest',
+      'gemini-3.5-flash-lite',
+      'gemini-3.1-flash-lite',
+      'gemini-2.5-flash',
+      config.gemini?.fallbackChatModel || 'gemini-flash-latest',
+    ])
+  );
+  let modelName = candidateModels[0];
 
   if (isLiveGeminiConfigured() && evidence.length > 0) {
-    try {
-      const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-      const model = genAI.getGenerativeModel({
-        model: config.gemini.chatModel || 'gemini-1.5-flash',
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 2048,
-        },
-      });
+    const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
+    const formattedEvidence = evidence
+      .map(
+        (e, idx) =>
+          `[EVIDENCE_${idx + 1}] Source: "${e.sourceTitle}" (${e.sourceKind}) ${e.pageNumber ? `Page ${e.pageNumber}` : ''}\nContent: ${e.text}`
+      )
+      .join('\n\n');
 
-      const formattedEvidence = evidence
-        .map(
-          (e, idx) =>
-            `[EVIDENCE_${idx + 1}] Source: "${e.sourceTitle}" (${e.sourceKind}) ${e.pageNumber ? `Page ${e.pageNumber}` : ''}\nContent: ${e.text}`
-        )
-        .join('\n\n');
-
-      const systemPrompt = `You are the StudyLM Advanced Research Synthesis Engine.
+    const systemPrompt = `You are the StudyLM Advanced Research Synthesis Engine.
 Your task is to produce a grounded, academic-grade research synthesis for the inquiry: "${cleanQuery}".
 
 CRITICAL GROUNDING RULES:
@@ -180,25 +182,35 @@ Produce a structured JSON response with keys:
 - "crossSourceComparison": string (comparison if applicable, else empty string)
 - "conclusion": string (concise grounded conclusion)`;
 
-      const result = await model.generateContent(systemPrompt);
-      const responseText = result.response.text();
+    let parsedSuccessfully = false;
 
-      // Parse JSON from model
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        synthesis = JSON.parse(jsonMatch[0]);
-      } else {
-        synthesis = generateDevSynthesis({
-          question: cleanQuery,
-          intent,
-          evidence,
-          contradictions,
-          gaps: knowledgeGaps,
-          comparison,
-          timeline,
+    for (const candidate of candidateModels) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: candidate,
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 2048,
+          },
         });
+
+        const result = await model.generateContent(systemPrompt);
+        const responseText = result.response.text();
+
+        // Parse JSON from model
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          synthesis = JSON.parse(jsonMatch[0]);
+          modelName = candidate;
+          parsedSuccessfully = true;
+          break;
+        }
+      } catch (err) {
+        console.warn(`[Advanced Research Warning] Model '${candidate}' failed: ${err.message}. Trying next candidate model...`);
       }
-    } catch (err) {
+    }
+
+    if (!parsedSuccessfully) {
       synthesis = generateDevSynthesis({
         question: cleanQuery,
         intent,

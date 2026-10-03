@@ -231,27 +231,51 @@ async function executeGeminiWithRetry(genAI, modelName, systemInstruction, userP
 }
 
 /**
- * Call Gemini Generative AI or fallback cleanly
+ * Candidate models prioritized for high rate-limits & reliable free tier quotas
+ */
+const CANDIDATE_CHAT_MODELS = Array.from(
+  new Set([
+    config.gemini?.chatModel || 'gemini-3.5-flash',
+    'gemini-3.5-flash',
+    'gemini-flash-latest',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash',
+  ])
+).filter(Boolean);
+
+/**
+ * Call Gemini Generative AI or fallback cleanly across candidate models
  */
 async function callGeminiForStudyTool(systemInstruction, userPrompt) {
-  const modelName = config.gemini?.chatModel || 'gemini-2.5-flash';
-  const fallbackModel = config.gemini?.fallbackChatModel || '';
-
   if (isLiveGeminiConfigured()) {
     const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-    try {
-      return await executeGeminiWithRetry(genAI, modelName, systemInstruction, userPrompt, 2);
-    } catch (primaryErr) {
-      if (fallbackModel && fallbackModel !== modelName) {
-        console.warn(`[Gemini Fallback] Primary model ${modelName} failed. Attempting configured fallback ${fallbackModel}...`);
-        try {
-          return await executeGeminiWithRetry(genAI, fallbackModel, systemInstruction, userPrompt, 2);
-        } catch (fallbackErr) {
-          throw new Error(`Gemini study tool generation failed with primary and fallback models: ${primaryErr.message}; ${fallbackErr.message}`);
+    let lastError = null;
+
+    for (const modelName of CANDIDATE_CHAT_MODELS) {
+      try {
+        const result = await executeGeminiWithRetry(genAI, modelName, systemInstruction, userPrompt, 1);
+        return result;
+      } catch (err) {
+        lastError = err;
+        const errMsg = err.message || '';
+        const isQuotaOrNotFound =
+          errMsg.includes('429') ||
+          errMsg.includes('RESOURCE_EXHAUSTED') ||
+          errMsg.includes('Quota exceeded') ||
+          errMsg.includes('404') ||
+          errMsg.includes('not found') ||
+          errMsg.includes('not supported');
+
+        if (isQuotaOrNotFound) {
+          console.warn(`[Gemini Model Fallback] Model ${modelName} encountered quota/unsupported error (${errMsg.slice(0, 100)}). Trying next candidate model...`);
+          continue;
         }
+        break;
       }
-      throw new Error(`Gemini study tool generation failed: ${primaryErr.message}`);
     }
+
+    throw new Error(`Gemini study tool generation failed: ${lastError?.message || 'Unknown API error'}`);
   }
 
   if (isPseudoFallbackEnabled()) {

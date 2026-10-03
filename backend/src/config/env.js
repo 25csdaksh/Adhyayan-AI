@@ -21,8 +21,8 @@ const config = {
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || '',
     embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-001',
-    chatModel: process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash',
-    fallbackChatModel: process.env.GEMINI_CHAT_FALLBACK_MODEL || '',
+    chatModel: process.env.GEMINI_CHAT_MODEL || 'gemini-3.5-flash',
+    fallbackChatModel: process.env.GEMINI_CHAT_FALLBACK_MODEL || 'gemini-flash-latest',
     dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '768', 10),
     enablePseudoEmbeddingFallback:
       process.env.NODE_ENV !== 'production' &&

@@ -158,28 +158,50 @@ async function executeResearch({
   });
 
   let rawOutput = null;
-  let modelName = config.gemini?.chatModel || 'gemini-1.5-flash';
+  const candidateModels = Array.from(
+    new Set([
+      config.gemini?.chatModel || 'gemini-3.5-flash',
+      'gemini-3.5-flash',
+      'gemini-flash-latest',
+      'gemini-3.5-flash-lite',
+      'gemini-3.1-flash-lite',
+      'gemini-2.5-flash',
+      config.gemini?.fallbackChatModel || 'gemini-flash-latest',
+    ])
+  );
+  let modelName = candidateModels[0];
 
   if (isLiveGeminiConfigured()) {
-    try {
-      const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        generationConfig: {
-          temperature: 0.2,
-        },
-      });
+    const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
+    let lastError = null;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      rawOutput = response.text();
-    } catch (err) {
+    for (const candidate of candidateModels) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: candidate,
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          generationConfig: {
+            temperature: 0.2,
+          },
+        });
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        rawOutput = response.text();
+        modelName = candidate;
+        break;
+      } catch (err) {
+        lastError = err;
+        console.warn(`[Research Generation Warning] Model '${candidate}' failed: ${err.message}. Trying next candidate model...`);
+      }
+    }
+
+    if (!rawOutput) {
       if (isPseudoFallbackEnabled()) {
         rawOutput = null;
         modelName = 'dev-simulation';
       } else {
-        throw new Error(`Research generation failed: ${err.message}`);
+        throw new Error(`Research generation failed: ${lastError ? lastError.message : 'All candidate models exhausted'}`);
       }
     }
   } else if (isPseudoFallbackEnabled()) {

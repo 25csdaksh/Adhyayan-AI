@@ -165,17 +165,52 @@ ${sampleText}
 Output valid JSON only:`;
 
       try {
-        const chatModelName = config.gemini?.chatModel || 'gemini-2.5-flash';
-        const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-        const model = genAI.getGenerativeModel({
-          model: chatModelName,
-          generationConfig: {
-            responseMimeType: 'application/json',
-          },
-        });
+        const candidateChatModels = Array.from(
+          new Set([
+            config.gemini?.chatModel || 'gemini-3.5-flash',
+            'gemini-3.5-flash',
+            'gemini-flash-latest',
+            'gemini-3.5-flash-lite',
+            'gemini-3.1-flash-lite',
+            'gemini-2.5-flash',
+          ])
+        ).filter(Boolean);
 
-        const result = await model.generateContent(prompt);
-        const responseText = result?.response?.text() || '';
+        const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
+        let responseText = '';
+        let usedModel = candidateChatModels[0];
+
+        for (const modelName of candidateChatModels) {
+          try {
+            const model = genAI.getGenerativeModel({
+              model: modelName,
+              generationConfig: {
+                responseMimeType: 'application/json',
+              },
+            });
+
+            const result = await model.generateContent(prompt);
+            responseText = result?.response?.text() || '';
+            if (responseText && responseText.trim().length > 0) {
+              usedModel = modelName;
+              break;
+            }
+          } catch (err) {
+            const errMsg = err.message || '';
+            const isQuotaOrNotFound =
+              errMsg.includes('429') ||
+              errMsg.includes('RESOURCE_EXHAUSTED') ||
+              errMsg.includes('Quota exceeded') ||
+              errMsg.includes('404') ||
+              errMsg.includes('not found') ||
+              errMsg.includes('not supported');
+
+            if (isQuotaOrNotFound) {
+              continue;
+            }
+            break;
+          }
+        }
 
         // Parse JSON response safely
         const cleanedJson = responseText
@@ -194,7 +229,7 @@ Output valid JSON only:`;
           importantFacts: Array.isArray(parsed.importantFacts) ? parsed.importantFacts.filter(Boolean) : [],
           sections: Array.isArray(parsed.sections) ? parsed.sections : [],
           suggestedQuestions: Array.isArray(parsed.suggestedQuestions) ? parsed.suggestedQuestions.filter(Boolean) : [],
-          model: chatModelName,
+          model: usedModel,
         };
       } catch (geminiErr) {
         console.warn(`[Source Analysis Warning] Gemini analysis failed for ${document._id}, falling back to deterministic:`, geminiErr.message);

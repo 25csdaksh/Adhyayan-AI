@@ -213,34 +213,68 @@ async function generateGroundedResponse({
   });
 
 
-  const chatModelName = config.gemini?.chatModel || 'gemini-2.5-flash';
+  const candidateChatModels = Array.from(
+    new Set([
+      config.gemini?.chatModel || 'gemini-3.5-flash',
+      'gemini-3.5-flash',
+      'gemini-flash-latest',
+      'gemini-3.5-flash-lite',
+      'gemini-3.1-flash-lite',
+      'gemini-2.5-flash',
+    ])
+  ).filter(Boolean);
+
   let rawAnswer = '';
+  let usedModelName = candidateChatModels[0];
 
   // 6. Gemini Generation or Dev Fallback
   if (!isLiveGeminiConfigured()) {
     if (isPseudoFallbackEnabled()) {
       rawAnswer = generateDeterministicDevAnswer(cleanQuestion, formattedSources, queryAnalysis);
+      usedModelName = 'dev-simulation';
     } else {
       throw new Error(
         'Google Gemini API key is not configured and pseudo-embedding fallback is disabled.'
       );
     }
   } else {
-    try {
-      const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-      const model = genAI.getGenerativeModel({
-        model: chatModelName,
-        systemInstruction: SYSTEM_INSTRUCTION,
-      });
+    const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
+    let lastApiErr = null;
 
-      const result = await model.generateContent(prompt);
-      rawAnswer = result?.response?.text() || '';
+    for (const modelName of candidateChatModels) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction: SYSTEM_INSTRUCTION,
+        });
 
-      if (!rawAnswer || rawAnswer.trim().length === 0) {
-        throw new Error('Gemini API returned an empty response');
+        const result = await model.generateContent(prompt);
+        rawAnswer = result?.response?.text() || '';
+
+        if (rawAnswer && rawAnswer.trim().length > 0) {
+          usedModelName = modelName;
+          break;
+        }
+      } catch (apiErr) {
+        lastApiErr = apiErr;
+        const errMsg = apiErr.message || '';
+        const isQuotaOrNotFound =
+          errMsg.includes('429') ||
+          errMsg.includes('RESOURCE_EXHAUSTED') ||
+          errMsg.includes('Quota exceeded') ||
+          errMsg.includes('404') ||
+          errMsg.includes('not found') ||
+          errMsg.includes('not supported');
+
+        if (isQuotaOrNotFound) {
+          continue;
+        }
+        break;
       }
-    } catch (apiErr) {
-      throw new Error(`Failed to generate response from AI: ${apiErr.message || 'Unknown provider error'}`);
+    }
+
+    if (!rawAnswer || rawAnswer.trim().length === 0) {
+      throw new Error(`Failed to generate response from AI: ${lastApiErr?.message || 'Unknown provider error'}`);
     }
   }
 
@@ -268,7 +302,7 @@ async function generateGroundedResponse({
         isFollowUp: queryAnalysis.isFollowUp,
       },
     },
-    model: isLiveGeminiConfigured() ? chatModelName : 'dev-simulation',
+    model: isLiveGeminiConfigured() ? usedModelName : 'dev-simulation',
   };
 }
 
