@@ -47,14 +47,14 @@ export const AppNavbar = ({
   const displayEmail = user?.email || '';
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E2E7E3] h-16">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 h-16 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
       <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
         {/* Left: Mobile Toggle & Mobile Logo */}
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onOpenMobileSidebar}
-            className="lg:hidden p-2 text-[#6B756F] hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-xl cursor-pointer"
+            className="lg:hidden p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl cursor-pointer"
             aria-label="Open sidebar"
           >
             <Menu className="w-5 h-5" />
@@ -68,13 +68,13 @@ export const AppNavbar = ({
         {/* Center: Search Bar */}
         <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-4">
           <div className="relative w-full">
-            <Search className="w-4 h-4 text-[#8E9993] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search notebooks, sources, notes..."
-              className="w-full bg-[#F7F8F6] border border-[#E2E7E3] rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm text-[#17211D] placeholder:text-[#8E9993] focus:bg-white focus:border-[#1F5E4B] focus:outline-none transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600 transition-all"
             />
           </div>
         </form>

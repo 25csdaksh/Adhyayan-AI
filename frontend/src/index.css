@@ -1,29 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  /* 60% Dominant: Eggshell White & Warm Paper Surfaces */
-  --color-background: #FAF8F3;
+  /* Crisp Modern SaaS Canvas */
+  --color-background: #F8FAFC;
   --color-surface: #FFFFFF;
-  --color-surface-warm: #FCFBF8;
-  --color-surface-hover: #F3EFE6;
-  --color-surface-subtle: #F7F5EE;
+  --color-surface-warm: #FFFFFF;
+  --color-surface-hover: #F1F5F9;
+  --color-surface-subtle: #F8FAFC;
   
-  /* 30% Secondary: Deep Academic Ink, Muted Slate & Structural Borders */
-  --color-text-main: #141F1A;
-  --color-text-muted: #5B6660;
-  --color-text-light: #7F8C85;
-  --color-border: #E5E1D7;
-  --color-border-subtle: #EDEAE1;
-  --color-border-hover: #D0C9BA;
+  /* High-Contrast Typography & Sleek Slate Borders */
+  --color-text-main: #0F172A;
+  --color-text-muted: #475569;
+  --color-text-light: #64748B;
+  --color-border: #E2E8F0;
+  --color-border-subtle: #F1F5F9;
+  --color-border-hover: #CBD5E1;
 
-  /* 10% Accent: Deep Emerald Forest & Luminous Gold */
+  /* Premium Emerald & Luminous Gold Accents */
   --color-primary: #1F5E4B;
-  --color-primary-dark: #174638;
-  --color-primary-light: #E8F2EE;
-  --color-primary-subtle: #F0F7F4;
-  --color-accent: #D6A84F;
-  --color-accent-dark: #B88E3B;
-  --color-accent-light: #FAF4E8;
+  --color-primary-dark: #164638;
+  --color-primary-light: #E8F5EE;
+  --color-primary-subtle: #F0FDF4;
+  --color-accent: #D97706;
+  --color-accent-dark: #B45309;
+  --color-accent-light: #FEF3C7;
 
   --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -32,20 +32,20 @@
 @layer base {
   :root {
     --primary: #1F5E4B;
-    --primary-dark: #174638;
-    --primary-light: #E8F2EE;
-    --accent: #D6A84F;
-    --bg-page: #FAF8F3;
+    --primary-dark: #164638;
+    --primary-light: #E8F5EE;
+    --accent: #D97706;
+    --bg-page: #F8FAFC;
     --surface: #FFFFFF;
-    --text-primary: #141F1A;
-    --text-secondary: #5B6660;
-    --border-main: #E5E1D7;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --border-main: #E2E8F0;
   }
 
   body {
     font-family: var(--font-sans);
-    background-color: #FAF8F3;
-    color: #141F1A;
+    background-color: #F8FAFC;
+    color: #0F172A;
     margin: 0;
     padding: 0;
     min-height: 100vh;
@@ -57,13 +57,14 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background-color: #FAF8F3;
+    background-color: #F8FAFC;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-sans);
-    color: #141F1A;
-    letter-spacing: -0.015em;
+    color: #0F172A;
+    letter-spacing: -0.02em;
+    font-weight: 700;
   }
 }
 

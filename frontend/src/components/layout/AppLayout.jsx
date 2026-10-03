@@ -29,7 +29,7 @@ export const AppLayout = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#FAF8F3] text-[#141F1A]">
+    <div className="min-h-screen flex bg-[#F8FAFC] text-[#0F172A]">
       {/* Sidebar */}
       <AppSidebar
         mobileOpen={mobileSidebarOpen}

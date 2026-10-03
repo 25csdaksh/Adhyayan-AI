@@ -56,17 +56,17 @@ export const AppSidebar = ({
   const displayEmail = user?.email || '';
 
   const sidebarContent = (
-    <div className="h-full flex flex-col justify-between p-4 bg-white border-r border-[#E2E7E3] w-64">
+    <div className="h-full flex flex-col justify-between p-4 bg-white border-r border-slate-200/80 w-64 shadow-[1px_0_4px_rgba(0,0,0,0.02)]">
       <div className="space-y-6">
         {/* Brand Header */}
-        <div className="flex items-center justify-between px-2 pt-1">
-          <Link to="/dashboard" className="flex items-center gap-2 group">
-            <BrandLogo size="md" className="group-hover:scale-105 transition-transform" />
+        <div className="flex items-center justify-between px-2 pt-2 pb-1">
+          <Link to="/dashboard" className="flex items-center group py-1">
+            <BrandLogo size="lg" className="h-10 sm:h-11 w-auto max-w-[195px] object-contain group-hover:scale-[1.03] transition-transform" />
           </Link>
           {onCloseMobile && (
             <button
               onClick={onCloseMobile}
-              className="lg:hidden p-1.5 text-[#6B756F] hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg"
+              className="lg:hidden p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg"
             >
               <X className="w-5 h-5" />
             </button>

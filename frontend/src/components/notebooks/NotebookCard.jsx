@@ -53,13 +53,15 @@ export const NotebookCard = ({
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  const sourceCount = notebook.sourcesCount ?? notebook.sourceCount ?? (notebook.sources?.length) ?? 0;
+
   return (
-    <Card hoverable className="group relative flex flex-col justify-between overflow-hidden border-[#E2E7E3] hover:border-[#BAC5C0]">
+    <Card hoverable className="group relative flex flex-col justify-between overflow-hidden border-slate-200/80 bg-white hover:border-emerald-600/40 hover:shadow-md transition-all duration-200">
       {/* Top Bar with Icon & Actions */}
       <div className="p-5 sm:p-6 pb-2">
         <div className="flex items-start justify-between gap-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center border border-[#D8E9E2] bg-[#E8F2EE] text-[#1F5E4B] shadow-2xs transition-transform duration-200 group-hover:scale-105">
-            <Icon className="w-5 h-5" />
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center border border-emerald-100 bg-emerald-50 text-emerald-800 shadow-2xs transition-transform duration-200 group-hover:scale-105">
+            <Icon className="w-5 h-5 text-emerald-700" />
           </div>
 
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -67,7 +69,7 @@ export const NotebookCard = ({
               trigger={
                 <button
                   type="button"
-                  className="p-1.5 text-[#8E9993] hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                   aria-label="Notebook options"
                 >
                   <MoreVertical className="w-4 h-4" />
@@ -92,24 +94,24 @@ export const NotebookCard = ({
 
         {/* Title & Description */}
         <Link to={`/notebooks/${notebookId}`} className="block mt-4 focus:outline-none">
-          <h3 className="text-base font-bold text-[#17211D] group-hover:text-[#1F5E4B] transition-colors leading-snug line-clamp-1">
+          <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors leading-snug line-clamp-1">
             {notebook.title}
           </h3>
-          <p className="text-xs sm:text-sm text-[#6B756F] mt-1.5 line-clamp-2 leading-relaxed min-h-[2.5rem]">
-            {notebook.description || 'No description provided.'}
+          <p className="text-xs sm:text-sm text-slate-500 mt-1.5 line-clamp-2 leading-relaxed min-h-[2.5rem]">
+            {notebook.description || 'Grounded workspace for documents, research papers, and study materials.'}
           </p>
         </Link>
       </div>
 
       {/* Card Footer Meta */}
-      <div className="px-5 sm:px-6 py-3.5 mt-4 bg-[#FAFBF9] border-t border-[#EDF1EE] flex items-center justify-between text-xs text-[#6B756F]">
-        <div className="flex items-center gap-1.5 font-medium">
-          <FileText className="w-3.5 h-3.5 text-[#1F5E4B]" />
-          <span>0 sources</span>
+      <div className="px-5 sm:px-6 py-3.5 mt-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+        <div className="flex items-center gap-1.5 font-semibold text-emerald-800">
+          <FileText className="w-3.5 h-3.5 text-emerald-600" />
+          <span>{sourceCount} {sourceCount === 1 ? 'source' : 'sources'}</span>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5 text-[#8E9993]" />
+          <Clock className="w-3.5 h-3.5 text-slate-400" />
           <span>{formatUpdatedTime(notebook.updatedAt || notebook.lastUpdated)}</span>
         </div>
       </div>

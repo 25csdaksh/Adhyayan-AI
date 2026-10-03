@@ -11,11 +11,11 @@ export const BrandLogo = ({
   priority = false,
 }) => {
   const sizeClasses = {
-    xs: 'h-6 w-auto',
-    sm: 'h-7 w-auto sm:h-8',
-    md: 'h-8 w-auto sm:h-9',
-    lg: 'h-10 w-auto sm:h-12',
-    xl: 'h-12 w-auto sm:h-16',
+    xs: 'h-7 sm:h-8 w-auto max-w-[150px]',
+    sm: 'h-9 sm:h-10 w-auto max-w-[190px]',
+    md: 'h-10 sm:h-11 md:h-12 w-auto max-w-[220px]',
+    lg: 'h-13 sm:h-15 w-auto max-w-[280px]',
+    xl: 'h-16 sm:h-20 w-auto max-w-[340px]',
   };
 
   const selectedSizeClass = sizeClasses[size] || sizeClasses.md;
