@@ -4,7 +4,7 @@
 
 ---
 
-## 📌 Status: Phase 10 Completed (Web Sources + Advanced Research)
+## 📌 Status: Phase 12 Completed (Production Hardening + Reliability + Observability)
 
 - **Phase 01:** Foundation, Monorepo, Express Backend, MongoDB, CORS, `/api/health` *(Verified)*
 - **Phase 02:** Light-First Academic UI/UX, Design System, Landing Page, Dashboard, 3-Panel Workspace, Chat UI, Source Management, Settings, Profile *(Verified)*
@@ -15,7 +15,10 @@
 - **Phase 07:** Google Gemini Embeddings (`text-embedding-004`), MongoDB Atlas Vector Search & Semantic Retrieval *(Verified)*
 - **Phase 08:** Grounded RAG Chat, AI Answers & Citations Synthesis *(Verified)*
 - **Phase 09:** AI Study Tools (Summarizer, Flashcards, Quizzes, Mind Maps) *(Verified)*
-- **Phase 10:** Web Sources + Advanced Research Engine (SSRF Protection, Multi-Source Vector Scoping, Grounded Research) *(Verified)*
+- **Phase 10:** Core NotebookLM Intelligence (Source Analysis, Deep Coverage, Deterministic Synthesis) *(Verified)*
+- **Phase 11:** Web Sources + Advanced Research Engine (SSRF Protection, Multi-Source Vector Scoping, Grounded Research) *(Verified)*
+- **Phase 12:** Production Hardening + Reliability + Observability (Rate Limiting, AI Quota Guard, NoSQL Sanitization, Graceful Shutdown, Stale Job Recovery, Health Probes) *(Verified)*
+
 
 ---
 

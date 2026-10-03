@@ -6,8 +6,16 @@ const config = require('./config/env');
 const apiRoutes = require('./routes');
 const notFoundHandler = require('./middlewares/notFound');
 const errorHandler = require('./middlewares/errorHandler');
+const requestIdMiddleware = require('./middlewares/requestId');
+const requestLogger = require('./middlewares/requestLogger');
+const { noSqlSanitizer } = require('./middlewares/sanitizer');
+const requestTimeout = require('./middlewares/timeout');
+const { generalRateLimiter } = require('./middlewares/rateLimiter');
 
 const app = express();
+
+// Request Correlation ID
+app.use(requestIdMiddleware);
 
 // Security HTTP headers
 app.use(helmet());
@@ -39,25 +47,34 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Request-Id'],
+    exposedHeaders: ['X-Request-Id', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'Retry-After'],
   })
 );
 
-// Logging middleware
+// Structured & morgan logging
 if (config.env === 'development') {
   app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
 }
+app.use(requestLogger);
+
+// Request execution timeout
+app.use(requestTimeout(90000));
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// NoSQL Operator Injection Sanitizer
+app.use(noSqlSanitizer);
+
+// General Tier Rate Limiting
+app.use(generalRateLimiter);
+
 // Root welcome endpoint
 app.get('/', (req, res) => {
   res.status(200).json({
-    message: 'Welcome to StudyLM API Backend (Phase 03: Authentication Active)',
+    message: 'Welcome to StudyLM API Backend (Phase 12: Production Hardened)',
     healthEndpoint: '/api/health',
     authEndpoints: '/api/auth',
     documentation: 'https://github.com/25csdaksh/Adhyayan-AI',
@@ -74,3 +91,4 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 module.exports = app;
+

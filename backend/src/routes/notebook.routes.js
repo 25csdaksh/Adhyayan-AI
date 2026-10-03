@@ -7,6 +7,8 @@ const {
   deleteNotebook,
 } = require('../controllers/notebook.controller');
 const { authenticate } = require('../middlewares/auth');
+const { validateObjectIds, validatePagination } = require('../middlewares/validator');
+const { searchRateLimiter } = require('../middlewares/rateLimiter');
 
 const documentRoutes = require('./document.routes');
 const chatRoutes = require('./chat.routes');
@@ -21,7 +23,12 @@ const router = express.Router();
 router.use(authenticate);
 
 // Vector search endpoint for a specific notebook
-router.post('/:notebookId/search', searchNotebook);
+router.post(
+  '/:notebookId/search',
+  validateObjectIds('notebookId'),
+  searchRateLimiter,
+  searchNotebook
+);
 
 // Re-route into document routes
 router.use('/:notebookId/documents', documentRoutes);
@@ -40,11 +47,12 @@ router.use('/:notebookId/research', researchRoutes);
 
 router.route('/')
   .post(createNotebook)
-  .get(getNotebooks);
+  .get(validatePagination, getNotebooks);
 
 router.route('/:id')
-  .get(getNotebookById)
-  .patch(updateNotebook)
-  .delete(deleteNotebook);
+  .get(validateObjectIds('id'), getNotebookById)
+  .patch(validateObjectIds('id'), updateNotebook)
+  .delete(validateObjectIds('id'), deleteNotebook);
 
 module.exports = router;
+

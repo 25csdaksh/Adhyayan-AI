@@ -9,21 +9,25 @@ const {
   deleteStudyTool,
 } = require('../controllers/studyTool.controller');
 const { authenticate } = require('../middlewares/auth');
+const { aiRateLimiter } = require('../middlewares/rateLimiter');
+const { validateObjectIds, validatePagination } = require('../middlewares/validator');
 
 const router = express.Router({ mergeParams: true });
 
-// Protect all study tool routes
+// Protect all study tool routes and validate notebookId param
 router.use(authenticate);
+router.use(validateObjectIds('notebookId'));
 
-// Generation endpoints
-router.post('/summary', createSummary);
-router.post('/flashcards', createFlashcards);
-router.post('/quiz', createQuiz);
-router.post('/mindmap', createMindMap);
+// Generation endpoints (AI rate limited)
+router.post('/summary', aiRateLimiter, createSummary);
+router.post('/flashcards', aiRateLimiter, createFlashcards);
+router.post('/quiz', aiRateLimiter, createQuiz);
+router.post('/mindmap', aiRateLimiter, createMindMap);
 
 // History and inspection endpoints
-router.get('/', getStudyTools);
-router.get('/:studyToolId', getStudyToolById);
-router.delete('/:studyToolId', deleteStudyTool);
+router.get('/', validatePagination, getStudyTools);
+router.get('/:studyToolId', validateObjectIds('studyToolId'), getStudyToolById);
+router.delete('/:studyToolId', validateObjectIds('studyToolId'), deleteStudyTool);
 
 module.exports = router;
+
