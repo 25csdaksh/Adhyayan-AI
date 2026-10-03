@@ -10,6 +10,8 @@ import {
   Activity,
   LogIn,
   UserPlus,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
@@ -20,36 +22,34 @@ export const LandingNavbar = () => {
   const { isAuthenticated, user } = useAuth();
 
   return (
-    <header className="sticky top-0 z-40 bg-[#FAF8F3]/90 backdrop-blur-md border-b border-[#E5E1D7]">
+    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-18">
-          {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <BrandLogo size="md" className="group-hover:scale-105 transition-transform" />
-            <span className="text-[10px] font-semibold bg-[#E8F2EE] text-[#1F5E4B] px-2 py-0.5 rounded-full border border-[#D8E9E2] hidden sm:inline-block">
-              AI Studio
-            </span>
+        <div className="flex items-center justify-between h-18 sm:h-20">
+          {/* Brand Logo - Prominent & Crisp */}
+          <Link to="/" className="flex items-center gap-3 group py-2">
+            <BrandLogo size="lg" className="h-11 sm:h-12 w-auto max-w-[210px] object-contain group-hover:scale-[1.03] transition-transform" />
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-[#5B6660]">
-            <a href="#how-it-works" className="hover:text-[#141F1A] transition-colors">How It Works</a>
-            <a href="#capabilities" className="hover:text-[#141F1A] transition-colors">Capabilities</a>
-            <a href="#workspace-preview" className="hover:text-[#141F1A] transition-colors">Workspace Preview</a>
-            <a href="#study-tools" className="hover:text-[#141F1A] transition-colors">Study Tools</a>
+          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+            <a href="#how-it-works" className="hover:text-emerald-700 transition-colors">How It Works</a>
+            <a href="#capabilities" className="hover:text-emerald-700 transition-colors">Capabilities</a>
+            <a href="#workspace-preview" className="hover:text-emerald-700 transition-colors">Live Demo</a>
+            <a href="#study-tools" className="hover:text-emerald-700 transition-colors">Study Tools</a>
+            <a href="#comparison" className="hover:text-emerald-700 transition-colors">Why AdhyayanLM</a>
           </nav>
 
           {/* Action CTAs */}
           <div className="hidden sm:flex items-center gap-3">
             <Link to="/health">
-              <Button variant="ghost" size="sm" leftIcon={Activity}>
+              <Button variant="ghost" size="sm" leftIcon={Activity} className="text-slate-500 hover:text-slate-900">
                 Diagnostics
               </Button>
             </Link>
 
             {isAuthenticated ? (
-              <Link to="/dashboard" className="flex items-center gap-2">
-                <Button variant="primary" size="sm" rightIcon={ArrowRight}>
+              <Link to="/dashboard" className="flex items-center gap-2.5">
+                <Button variant="primary" size="md" rightIcon={ArrowRight} className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold shadow-md shadow-emerald-700/20">
                   Open Workspace
                 </Button>
                 <Avatar name={user?.name} size="sm" status="online" />
@@ -57,13 +57,13 @@ export const LandingNavbar = () => {
             ) : (
               <>
                 <Link to="/login">
-                  <Button variant="outline" size="sm" leftIcon={LogIn}>
+                  <Button variant="ghost" size="md" leftIcon={LogIn} className="text-slate-700 hover:text-slate-900 font-semibold">
                     Sign In
                   </Button>
                 </Link>
                 <Link to="/register">
-                  <Button variant="primary" size="sm" rightIcon={ArrowRight}>
-                    Create Account
+                  <Button variant="primary" size="md" rightIcon={ArrowRight} className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold shadow-md shadow-emerald-700/20">
+                    Get Started Free
                   </Button>
                 </Link>
               </>
