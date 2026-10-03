@@ -508,6 +508,9 @@ const getDocumentCoverage = asyncHandler(async (req, res) => {
   const { checkDocumentCoverage } = require('../services/sourceIntelligence/sourceCoverageService');
   const coverage = await checkDocumentCoverage(documentId, notebook._id);
 
+  return ApiResponse.success(res, { coverage }, 'Document coverage retrieved', 200);
+});
+
 /**
  * @desc Force refresh / re-fetch web document source
  * @route POST /api/notebooks/:notebookId/documents/:documentId/refresh
