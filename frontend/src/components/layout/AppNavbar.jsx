@@ -17,6 +17,7 @@ import {
 import { Avatar } from '../ui/Avatar';
 import { Dropdown, DropdownItem, DropdownDivider } from '../ui/Dropdown';
 import { Button } from '../ui/Button';
+import { BrandLogo } from '../common/BrandLogo';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -59,11 +60,8 @@ export const AppNavbar = ({
             <Menu className="w-5 h-5" />
           </button>
 
-          <Link to="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#1F5E4B] text-white flex items-center justify-center shadow-2xs">
-              <BookOpen className="w-4 h-4" />
-            </div>
-            <span className="font-bold text-base text-[#17211D] tracking-tight">Adhyayan-AI</span>
+          <Link to="/dashboard" className="flex items-center gap-2">
+            <BrandLogo size="sm" className="hover:scale-105 transition-transform" />
           </Link>
         </div>
 

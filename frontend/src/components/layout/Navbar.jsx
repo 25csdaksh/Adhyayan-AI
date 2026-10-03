@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Layers, Activity, Sparkles } from 'lucide-react';
+import { Layers, Activity, Sparkles } from 'lucide-react';
+import { BrandLogo } from '../common/BrandLogo';
 
 export const Navbar = () => {
   const location = useLocation();
@@ -15,21 +16,8 @@ export const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 p-0.5 shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-200">
-              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-white tracking-tight">Adhyayan-AI</span>
-                <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full flex items-center gap-1">
-                  <Sparkles className="w-2.5 h-2.5" /> v0.1
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium -mt-0.5">AI Study & Research Platform</p>
-            </div>
+          <Link to="/" className="flex items-center gap-2 group">
+            <BrandLogo size="md" className="group-hover:scale-105 transition-transform" />
           </Link>
 
           {/* Navigation Links */}

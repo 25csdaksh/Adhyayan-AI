@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { BrandLogo } from '../components/common/BrandLogo';
 import { Modal } from '../components/ui/Modal';
 import { Dropdown, DropdownItem, DropdownDivider } from '../components/ui/Dropdown';
 import { SourceCard } from '../components/sources/SourceCard';
@@ -505,11 +506,8 @@ export const NotebookWorkspacePage = () => {
           <div className="h-5 w-px bg-[#E2E7E3] hidden sm:block" />
 
           {/* Logo & Breadcrumb */}
-          <Link to="/dashboard" className="hidden sm:flex items-center gap-2 group">
-            <div className="w-7 h-7 rounded-lg bg-[#1F5E4B] text-white flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
-              <BookOpen className="w-3.5 h-3.5" />
-            </div>
-            <span className="font-bold text-xs text-[#17211D] tracking-tight">Adhyayan-AI</span>
+          <Link to="/dashboard" className="hidden sm:flex items-center group">
+            <BrandLogo size="xs" className="h-6 w-auto group-hover:scale-105 transition-transform" />
           </Link>
 
           <span className="text-[#8E9993] hidden sm:inline">/</span>

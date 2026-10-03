@@ -18,6 +18,7 @@ import {
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
+import { BrandLogo } from '../components/common/BrandLogo';
 
 export const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -81,11 +82,8 @@ export const RegisterPage = () => {
     <div className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#F7F8F6] text-[#17211D]">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-3">
         {/* Brand Logo */}
-        <Link to="/" className="inline-flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-2xl bg-[#1F5E4B] text-white flex items-center justify-center shadow-md shadow-[#1F5E4B]/20 group-hover:scale-105 transition-transform">
-            <BookOpen className="w-5 h-5" />
-          </div>
-          <span className="font-bold text-2xl text-[#17211D] tracking-tight font-sans">Adhyayan-AI</span>
+        <Link to="/" className="inline-flex items-center justify-center group mb-2">
+          <BrandLogo size="lg" className="group-hover:scale-105 transition-transform" />
         </Link>
 
         <h1 className="text-2xl sm:text-3xl font-bold text-[#17211D] tracking-tight">

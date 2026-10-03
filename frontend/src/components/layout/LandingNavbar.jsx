@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
+import { BrandLogo } from '../common/BrandLogo';
 
 export const LandingNavbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -23,19 +24,11 @@ export const LandingNavbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-18">
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-[#1F5E4B] text-white flex items-center justify-center shadow-sm shadow-[#1F5E4B]/20 group-hover:scale-105 transition-transform">
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-lg text-[#17211D] tracking-tight font-sans">Adhyayan-AI</span>
-                <span className="text-[10px] font-semibold bg-[#E8F2EE] text-[#1F5E4B] px-2 py-0.2 rounded-full border border-[#D8E9E2]">
-                  v0.3
-                </span>
-              </div>
-              <p className="text-[10px] text-[#6B756F] font-medium -mt-0.5 hidden sm:block">AI Study &amp; Research Platform</p>
-            </div>
+          <Link to="/" className="flex items-center gap-2 group">
+            <BrandLogo size="md" className="group-hover:scale-105 transition-transform" />
+            <span className="text-[10px] font-semibold bg-[#E8F2EE] text-[#1F5E4B] px-2 py-0.5 rounded-full border border-[#D8E9E2] hidden sm:inline-block">
+              AI Studio
+            </span>
           </Link>
 
           {/* Desktop Navigation */}

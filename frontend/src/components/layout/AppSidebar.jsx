@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
+import { BrandLogo } from '../common/BrandLogo';
 import { notebookService } from '../../api/notebookService';
 import { useAuth } from '../../context/AuthContext';
 
@@ -59,14 +60,8 @@ export const AppSidebar = ({
       <div className="space-y-6">
         {/* Brand Header */}
         <div className="flex items-center justify-between px-2 pt-1">
-          <Link to="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#1F5E4B] text-white flex items-center justify-center shadow-2xs">
-              <BookOpen className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="font-bold text-base text-[#17211D] tracking-tight">Adhyayan-AI</span>
-              <span className="text-[10px] block text-[#6B756F] font-medium -mt-0.5">Research Studio</span>
-            </div>
+          <Link to="/dashboard" className="flex items-center gap-2 group">
+            <BrandLogo size="md" className="group-hover:scale-105 transition-transform" />
           </Link>
           {onCloseMobile && (
             <button

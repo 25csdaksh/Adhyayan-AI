@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Shield, Sparkles, Terminal, Heart } from 'lucide-react';
+import { Shield, Sparkles, Terminal, Heart } from 'lucide-react';
+import { BrandLogo } from '../common/BrandLogo';
 
 export const LandingFooter = () => {
   return (
@@ -9,11 +10,8 @@ export const LandingFooter = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Col */}
           <div className="space-y-3 md:col-span-2 max-w-sm">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#1F5E4B] text-white flex items-center justify-center">
-                <BookOpen className="w-4 h-4" />
-              </div>
-              <span className="font-bold text-lg text-[#17211D]">Adhyayan-AI</span>
+            <div className="flex items-center">
+              <BrandLogo size="md" />
             </div>
             <p className="text-xs sm:text-sm text-[#6B756F] leading-relaxed">
               A modern, NotebookLM-style AI study and research platform grounded strictly in your personal textbooks, lecture slides, research papers, and web sources.
