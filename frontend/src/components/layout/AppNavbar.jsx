@@ -49,7 +49,7 @@ export const AppNavbar = ({
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E2E7E3] h-16">
       <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
-        {/* Left: Mobile Toggle & Breadcrumb Logo */}
+        {/* Left: Mobile Toggle & Mobile Logo */}
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -60,7 +60,7 @@ export const AppNavbar = ({
             <Menu className="w-5 h-5" />
           </button>
 
-          <Link to="/dashboard" className="flex items-center gap-2">
+          <Link to="/dashboard" className="lg:hidden flex items-center gap-2">
             <BrandLogo size="sm" className="hover:scale-105 transition-transform" />
           </Link>
         </div>

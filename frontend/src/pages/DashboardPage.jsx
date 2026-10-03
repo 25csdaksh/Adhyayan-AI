@@ -138,6 +138,34 @@ export const DashboardPage = () => {
     }
   };
 
+  // Calculate dynamic greeting based on current local hour
+  const getGreetingDetails = (name) => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) {
+      return {
+        greeting: `Good morning, ${name}`,
+        subtitle: 'Start your day with deep research and grounded synthesis across your notebooks.',
+      };
+    } else if (hour >= 12 && hour < 17) {
+      return {
+        greeting: `Good afternoon, ${name}`,
+        subtitle: 'Continue your research and explore study tools across your active sources.',
+      };
+    } else if (hour >= 17 && hour < 22) {
+      return {
+        greeting: `Good evening, ${name}`,
+        subtitle: 'Review your study guides, flashcards, and grounded notes tonight.',
+      };
+    } else {
+      return {
+        greeting: `Welcome back, ${name}`,
+        subtitle: 'Working late tonight? Pick up right where you left off across your study materials.',
+      };
+    }
+  };
+
+  const { greeting, subtitle } = getGreetingDetails(displayName);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-150">
       {/* Dashboard Greeting Header */}
@@ -148,10 +176,10 @@ export const DashboardPage = () => {
             <span>Research Studio Active</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#17211D] tracking-tight">
-            Good morning, {displayName}
+            {greeting}
           </h1>
           <p className="text-xs sm:text-sm text-[#6B756F] mt-1">
-            Continue your research and learning across your grounded study sources.
+            {subtitle}
           </p>
         </div>
 
@@ -179,25 +207,25 @@ export const DashboardPage = () => {
 
       {/* Quick Stats Overview */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1">
+        <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1 hover:border-[#1F5E4B]/40 transition-colors shadow-2xs">
           <span className="text-xs font-medium text-[#6B756F]">Active Notebooks</span>
           <p className="text-xl sm:text-2xl font-bold text-[#17211D]">
             {isLoading ? '...' : pagination.total}
           </p>
         </div>
-        <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1">
-          <span className="text-xs font-medium text-[#6B756F]">Plan Tier</span>
+        <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1 hover:border-[#1F5E4B]/40 transition-colors shadow-2xs">
+          <span className="text-xs font-medium text-[#6B756F]">Subscription Plan</span>
           <p className="text-xl sm:text-2xl font-bold text-[#1F5E4B]">
             {(user?.plan || 'Free').toUpperCase()}
           </p>
         </div>
-        <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1">
-          <span className="text-xs font-medium text-[#6B756F]">Grounding Status</span>
-          <p className="text-xl sm:text-2xl font-bold text-[#1F5E4B]">Zero Hallucination</p>
+        <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1 hover:border-[#1F5E4B]/40 transition-colors shadow-2xs">
+          <span className="text-xs font-medium text-[#6B756F]">Grounding Engine</span>
+          <p className="text-lg sm:text-xl font-bold text-[#1F5E4B] truncate">Strict Citations</p>
         </div>
-        <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1">
-          <span className="text-xs font-medium text-[#6B756F]">Security Status</span>
-          <p className="text-xl sm:text-2xl font-bold text-[#17211D]">SSRF Guarded</p>
+        <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1 hover:border-[#1F5E4B]/40 transition-colors shadow-2xs">
+          <span className="text-xs font-medium text-[#6B756F]">Data Security</span>
+          <p className="text-lg sm:text-xl font-bold text-[#17211D] truncate">Private &amp; Isolated</p>
         </div>
       </div>
 
