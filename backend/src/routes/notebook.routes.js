@@ -135,6 +135,11 @@ router.use('/:notebookId/web-sources', webSourceRoutes);
 // Re-route into research routes
 router.use('/:notebookId/research', researchRoutes);
 
+const researchSessionRoutes = require('./researchSession.routes');
+
+// Re-route into research session routes (Phase 14)
+router.use('/:notebookId/research-sessions', researchSessionRoutes);
+
 router.route('/')
   .post(createNotebook)
   .get(validatePagination, getNotebooks);

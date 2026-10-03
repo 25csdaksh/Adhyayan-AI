@@ -15,10 +15,11 @@ const { runTests: runWebRetrievalAndResearchTests } = require('./webRetrievalAnd
 const { runTests: runProductionHardeningTests } = require('./productionHardening.test');
 const { runTests: runLoadAndStressTests } = require('./loadAndStress.test');
 const { runTests: runPhase13PersonalizationTests } = require('./phase13Personalization.test');
+const { runPhase14Tests } = require('./phase14Research.test');
 
 async function main() {
   console.log('================================================================');
-  console.log('  StudyLM (Adhyayan-AI) — Phase 13 Comprehensive Verification');
+  console.log('  StudyLM (Adhyayan-AI) — Phase 14 Comprehensive Verification');
   console.log('================================================================\n');
 
   // Phase 10 / Baseline Regressions
@@ -42,9 +43,13 @@ async function main() {
   // Phase 13 Personal Research Memory & Knowledge UX
   const personalization = await runPhase13PersonalizationTests();
 
+  // Phase 14 Advanced AI Research & Knowledge Synthesis
+  const advancedResearch = await runPhase14Tests();
+
   console.log('================================================================');
-  console.log('  PHASE 13 & COMPREHENSIVE REGRESSION VERIFICATION SUMMARY:');
+  console.log('  PHASE 14 & COMPREHENSIVE REGRESSION VERIFICATION SUMMARY:');
   console.log('================================================================');
+  console.log(`  Phase 14 Advanced Research & Synthesis: ${advancedResearch.passed}/${advancedResearch.total}`);
   console.log(`  Phase 13 Personalization & UX: ${personalization.passed}/${personalization.total}`);
   console.log(`  Production Hardening: ${hardening.passed}/${hardening.total}`);
   console.log(`  Load & Stress Simulation: ${loadAndStress.passed}/${loadAndStress.total}`);
@@ -72,7 +77,8 @@ async function main() {
     webResearch.passed +
     hardening.passed +
     loadAndStress.passed +
-    personalization.passed;
+    personalization.passed +
+    advancedResearch.passed;
 
   const totalTests =
     sourceAnalysis.total +
@@ -87,7 +93,8 @@ async function main() {
     webResearch.total +
     hardening.total +
     loadAndStress.total +
-    personalization.total;
+    personalization.total +
+    advancedResearch.total;
 
   console.log('----------------------------------------------------------------');
   console.log(`  OVERALL TOTAL: ${totalPassed}/${totalTests} PASSED (100%)`);
