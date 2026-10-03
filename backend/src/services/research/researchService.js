@@ -215,4 +215,5 @@ async function executeResearch({
 module.exports = {
   INSUFFICIENT_RESEARCH_MSG,
   executeResearch,
+  generateDeterministicDevResearch,
 };

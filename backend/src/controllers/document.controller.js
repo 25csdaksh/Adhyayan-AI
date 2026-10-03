@@ -508,7 +508,40 @@ const getDocumentCoverage = asyncHandler(async (req, res) => {
   const { checkDocumentCoverage } = require('../services/sourceIntelligence/sourceCoverageService');
   const coverage = await checkDocumentCoverage(documentId, notebook._id);
 
-  return ApiResponse.success(res, { coverage }, 'Document coverage retrieved', 200);
+/**
+ * @desc Force refresh / re-fetch web document source
+ * @route POST /api/notebooks/:notebookId/documents/:documentId/refresh
+ * @access Private (Authenticated & Notebook Owner)
+ */
+const refreshDocument = asyncHandler(async (req, res) => {
+  const { notebookId, documentId } = req.params;
+  const notebook = await verifyNotebookOwnership(notebookId, req.user._id);
+
+  if (!mongoose.Types.ObjectId.isValid(documentId)) {
+    throw new ApiError(400, 'Invalid document ID format');
+  }
+
+  const document = await Document.findOne({
+    _id: documentId,
+    notebookId: notebook._id,
+  });
+
+  if (!document) {
+    throw new ApiError(404, 'Document not found');
+  }
+
+  if (document.sourceType !== 'url') {
+    throw new ApiError(400, 'Only URL / Web sources can be refreshed');
+  }
+
+  triggerAsyncProcessing(document._id, { forceRefresh: true });
+
+  return ApiResponse.success(
+    res,
+    { documentId: document._id, status: 'processing' },
+    'Document refresh initiated',
+    200
+  );
 });
 
 module.exports = {
@@ -517,6 +550,7 @@ module.exports = {
   getDocumentById,
   getDocumentStatus,
   reprocessDocument,
+  refreshDocument,
   getDocumentChunks,
   updateDocument,
   deleteDocument,

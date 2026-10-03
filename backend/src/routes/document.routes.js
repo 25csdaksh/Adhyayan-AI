@@ -5,6 +5,7 @@ const {
   getDocumentById,
   getDocumentStatus,
   reprocessDocument,
+  refreshDocument,
   getDocumentChunks,
   updateDocument,
   deleteDocument,
@@ -33,6 +34,7 @@ router
 
 router.get('/:documentId/status', getDocumentStatus);
 router.post('/:documentId/process', reprocessDocument);
+router.post('/:documentId/refresh', refreshDocument);
 router.post('/:documentId/embed', reprocessDocument);
 router.get('/:documentId/chunks', getDocumentChunks);
 router.get('/:documentId/analysis', getDocumentAnalysis);

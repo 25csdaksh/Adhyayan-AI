@@ -3,6 +3,7 @@ const config = require('../../../config/env');
 
 const providers = {
   duckduckgo: searchDuckDuckGo,
+  none: async () => [],
 };
 
 /**
@@ -10,8 +11,9 @@ const providers = {
  * @param {string} [name]
  * @returns {Function}
  */
-function getProvider(name = config.webSearch?.provider || 'duckduckgo') {
-  return providers[name.toLowerCase()] || searchDuckDuckGo;
+function getProvider(name = config.webSearch?.provider || 'none') {
+  const cleanName = (name || 'none').toLowerCase();
+  return providers[cleanName] || providers.none;
 }
 
 module.exports = {

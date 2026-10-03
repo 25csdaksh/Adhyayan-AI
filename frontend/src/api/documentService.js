@@ -79,6 +79,15 @@ export const documentService = {
   },
 
   /**
+   * Trigger refresh for a web/URL document source
+   * @param {string} notebookId
+   * @param {string} documentId
+   */
+  async refreshDocument(notebookId, documentId) {
+    return apiClient.post(`/notebooks/${notebookId}/documents/${documentId}/refresh`);
+  },
+
+  /**
    * Get extracted chunks for a document
    * @param {string} notebookId
    * @param {string} documentId

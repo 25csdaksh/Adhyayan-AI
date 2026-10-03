@@ -8,7 +8,7 @@ const { chunkText } = require('../document/chunker');
 const { generateEmbeddings } = require('../embedding/embeddingService');
 
 /**
- * Ingest, extract, chunk, embed, and cache a web source URL
+ * Ingest, extract, chunk, embed, and cache a web source URL with content hash idempotency
  *
  * @param {Object} params
  * @param {string|import('mongoose').Types.ObjectId} params.notebookId
@@ -60,7 +60,7 @@ async function ingestWebSource({ notebookId, userId, url, forceRefresh = false }
   }
 
   try {
-    // 2. Safely fetch web page content with SSRF and redirect validation
+    // 2. Safely fetch web page content with hop-by-hop SSRF and redirect validation
     const fetchResult = await safeFetchWebPage(canonical);
 
     // 3. Extract text and metadata
@@ -71,7 +71,24 @@ async function ingestWebSource({ notebookId, userId, url, forceRefresh = false }
       throw new Error('No readable text content could be extracted from web page');
     }
 
-    // 4. Chunk extracted text
+    // 4. Idempotency Check: if existing content has identical hash and ready chunks exist, skip re-embedding
+    if (
+      !forceRefresh &&
+      webSource.contentHash === contentHash &&
+      webSource.status === 'ready'
+    ) {
+      const existingChunkCount = await Chunk.countDocuments({ webSourceId: webSource._id });
+      if (existingChunkCount > 0) {
+        webSource.fetchedAt = new Date();
+        webSource.expiresAt = new Date(Date.now() + cacheTtlMs);
+        webSource.httpStatus = fetchResult.httpStatus;
+        webSource.status = 'ready';
+        await webSource.save();
+        return webSource;
+      }
+    }
+
+    // 5. Chunk extracted text
     const rawChunks = chunkText(extracted.mainText, {
       notebookId,
     });
@@ -80,11 +97,11 @@ async function ingestWebSource({ notebookId, userId, url, forceRefresh = false }
       throw new Error('Extracted content could not be segmented into study chunks');
     }
 
-    // 5. Generate embeddings for chunks using existing embedding service
+    // 6. Generate embeddings for chunks using existing embedding service
     const chunkTexts = rawChunks.map((c) => c.text);
     const embeddings = await generateEmbeddings(chunkTexts);
 
-    // 6. Atomically replace chunks in database
+    // 7. Atomically replace chunks in database
     await Chunk.deleteMany({ webSourceId: webSource._id });
 
     const chunkDocuments = rawChunks.map((chunk, idx) => ({
@@ -108,7 +125,7 @@ async function ingestWebSource({ notebookId, userId, url, forceRefresh = false }
 
     await Chunk.insertMany(chunkDocuments);
 
-    // 7. Update WebSource to ready state
+    // 8. Update WebSource to ready state
     webSource.title = extracted.title;
     webSource.description = extracted.description;
     webSource.domain = extracted.domain;
@@ -130,6 +147,35 @@ async function ingestWebSource({ notebookId, userId, url, forceRefresh = false }
     await webSource.save();
     throw err;
   }
+}
+
+/**
+ * Manually refresh an existing web source
+ * @param {Object} params
+ * @param {string|import('mongoose').Types.ObjectId} params.notebookId
+ * @param {string|import('mongoose').Types.ObjectId} params.userId
+ * @param {string|import('mongoose').Types.ObjectId} params.webSourceId
+ * @returns {Promise<{ webSource: import('../../models/WebSource'), unchanged: boolean }>}
+ */
+async function refreshWebSource({ notebookId, userId, webSourceId }) {
+  const webSource = await WebSource.findOne({ _id: webSourceId, notebookId, userId });
+  if (!webSource) {
+    throw new Error('Web source not found or access denied');
+  }
+
+  const previousHash = webSource.contentHash;
+  const refreshed = await ingestWebSource({
+    notebookId,
+    userId,
+    url: webSource.canonicalUrl || webSource.url,
+    forceRefresh: true,
+  });
+
+  const unchanged = Boolean(previousHash && previousHash === refreshed.contentHash);
+  return {
+    webSource: refreshed,
+    unchanged,
+  };
 }
 
 /**
@@ -191,6 +237,7 @@ async function deleteWebSource({ notebookId, webSourceId, userId }) {
 
 module.exports = {
   ingestWebSource,
+  refreshWebSource,
   getWebSources,
   getWebSourceById,
   deleteWebSource,

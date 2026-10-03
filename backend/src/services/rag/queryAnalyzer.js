@@ -1,7 +1,7 @@
 /**
  * Query Analyzer & Intent Classifier
  * Categorizes user questions, extracts target concepts/entities, detects page-specific requests,
- * and resolves follow-up pronouns from conversation history without LLM overhead.
+ * determines source scope preferences, and resolves follow-up pronouns from conversation history without LLM overhead.
  */
 
 const STOP_WORDS = new Set([
@@ -56,6 +56,14 @@ const FOLLOW_UP_PRONOUNS = [
   /^(?:why\?|how\?|what else\?)$/i,
 ];
 
+const WEB_ONLY_PATTERNS = [
+  /\b(?:webpage|website|web source|web article|url|link|online source|from the web)\b/i,
+];
+
+const NOTEBOOK_ONLY_PATTERNS = [
+  /\b(?:uploaded (?:file|doc|pdf|docx|document)|my (?:pdf|doc|document|file|notes))\b/i,
+];
+
 /**
  * Extract clean concepts from a phrase (removing stop words)
  * @param {string} text
@@ -101,7 +109,7 @@ function resolveHistorySubject(history = []) {
 }
 
 /**
- * Analyze user query to extract intent, concepts, page references, and subqueries
+ * Analyze user query to extract intent, concepts, page references, source scope, and subqueries
  *
  * @param {string} query
  * @param {Array<{ role: string, content: string }>} [history=[]]
@@ -109,7 +117,6 @@ function resolveHistorySubject(history = []) {
  */
 function analyzeQuery(query = '', history = []) {
   const cleanQuery = typeof query === 'string' ? query.trim() : '';
-  const lowerQuery = cleanQuery.toLowerCase();
 
   let intent = 'specific';
   let targetPage = null;
@@ -118,8 +125,16 @@ function analyzeQuery(query = '', history = []) {
   let subQueries = [];
   let isFollowUp = false;
   let resolvedSubject = null;
+  let sourceScope = 'all';
 
-  // 1. Check Page-Specific Intent
+  // 1. Check Scope Preference
+  if (WEB_ONLY_PATTERNS.some((p) => p.test(cleanQuery)) && !NOTEBOOK_ONLY_PATTERNS.some((p) => p.test(cleanQuery))) {
+    sourceScope = 'web';
+  } else if (NOTEBOOK_ONLY_PATTERNS.some((p) => p.test(cleanQuery)) && !WEB_ONLY_PATTERNS.some((p) => p.test(cleanQuery))) {
+    sourceScope = 'notebook';
+  }
+
+  // 2. Check Page-Specific Intent
   for (const pat of PAGE_SPECIFIC_PATTERNS) {
     const m = cleanQuery.match(pat);
     if (m) {
@@ -132,7 +147,7 @@ function analyzeQuery(query = '', history = []) {
     }
   }
 
-  // 2. Check Summary / Overview Intent
+  // 3. Check Summary / Overview Intent
   if (intent !== 'page_specific') {
     const isSummary = SUMMARY_PATTERNS.some((p) => p.test(cleanQuery));
     if (isSummary) {
@@ -140,7 +155,7 @@ function analyzeQuery(query = '', history = []) {
     }
   }
 
-  // 3. Check Comparison Intent
+  // 4. Check Comparison Intent
   if (intent === 'specific') {
     for (const pat of COMPARISON_PATTERNS) {
       const match = cleanQuery.match(pat);
@@ -174,7 +189,7 @@ function analyzeQuery(query = '', history = []) {
     }
   }
 
-  // 4. Check Definition Intent
+  // 5. Check Definition Intent
   if (intent === 'specific') {
     for (const pat of DEFINITION_PATTERNS) {
       const match = cleanQuery.match(pat);
@@ -192,7 +207,7 @@ function analyzeQuery(query = '', history = []) {
     }
   }
 
-  // 5. Check Follow-Up Intent & Pronoun Resolution
+  // 6. Check Follow-Up Intent & Pronoun Resolution
   const hasFollowUpSignals = FOLLOW_UP_PRONOUNS.some((p) => p.test(cleanQuery));
   const rawConcepts = extractConceptsFromPhrase(cleanQuery);
 
@@ -225,6 +240,7 @@ function analyzeQuery(query = '', history = []) {
     targetPageEnd,
     isFollowUp,
     resolvedSubject,
+    sourceScope,
   };
 }
 
