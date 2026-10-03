@@ -53,6 +53,28 @@ async function recoverStaleProcessingJobs(thresholdMs = DEFAULT_STALE_THRESHOLD_
   return recoveredCount;
 }
 
+/**
+ * Start periodic background recovery of stale jobs
+ * @param {number} intervalMs - Interval in milliseconds between recovery runs (default: 10 minutes)
+ * @returns {NodeJS.Timeout} The interval timer handle
+ */
+function startStaleJobRecovery(intervalMs = 10 * 60 * 1000) {
+  // Execute an initial pass after a brief startup delay (10s)
+  setTimeout(() => {
+    recoverStaleProcessingJobs().catch((err) => {
+      logger.error('[Stale Job Recovery] Error during initial recovery pass:', { error: err });
+    });
+  }, 10000);
+
+  // Set recurring interval
+  return setInterval(() => {
+    recoverStaleProcessingJobs().catch((err) => {
+      logger.error('[Stale Job Recovery] Error during interval recovery pass:', { error: err });
+    });
+  }, intervalMs);
+}
+
 module.exports = {
   recoverStaleProcessingJobs,
+  startStaleJobRecovery,
 };
