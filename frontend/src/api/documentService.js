@@ -124,4 +124,31 @@ export const documentService = {
   async searchNotebook(notebookId, searchParams) {
     return apiClient.post(`/notebooks/${notebookId}/search`, searchParams);
   },
+
+  /**
+   * Get structured source intelligence analysis for a document
+   * @param {string} notebookId
+   * @param {string} documentId
+   */
+  async getDocumentAnalysis(notebookId, documentId) {
+    return apiClient.get(`/notebooks/${notebookId}/documents/${documentId}/analysis`);
+  },
+
+  /**
+   * Manually trigger/regenerate source analysis for a document
+   * @param {string} notebookId
+   * @param {string} documentId
+   */
+  async analyzeDocument(notebookId, documentId) {
+    return apiClient.post(`/notebooks/${notebookId}/documents/${documentId}/analyze`);
+  },
+
+  /**
+   * Get source coverage diagnostics for a document
+   * @param {string} notebookId
+   * @param {string} documentId
+   */
+  async getDocumentCoverage(notebookId, documentId) {
+    return apiClient.get(`/notebooks/${notebookId}/documents/${documentId}/coverage`);
+  },
 };

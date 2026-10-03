@@ -69,6 +69,13 @@ export const SourceCard = ({
   const renderStatus = () => {
     switch (source.status) {
       case 'ready':
+        if (source.analysis?.status === 'ready') {
+          return (
+            <Badge variant="forest" size="sm" dot>
+              Analyzed
+            </Badge>
+          );
+        }
         return (
           <Badge variant="forest" size="sm" dot>
             Ready
@@ -164,7 +171,18 @@ export const SourceCard = ({
           </div>
         </div>
 
-        <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+        <div onClick={(e) => e.stopPropagation()} className="shrink-0 flex items-center gap-1">
+          {source.status === 'ready' && onViewDetails && (
+            <button
+              type="button"
+              onClick={() => onViewDetails(source)}
+              className="p-1 text-[#6B756F] hover:text-[#1F5E4B] hover:bg-[#E8F2EE] rounded-md transition-colors cursor-pointer"
+              title="View Summary & Intelligence"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+            </button>
+          )}
+
           <Dropdown
             trigger={
               <button
@@ -176,6 +194,14 @@ export const SourceCard = ({
               </button>
             }
           >
+            {source.status === 'ready' && onViewDetails && (
+              <DropdownItem
+                icon={BookOpen}
+                onClick={() => onViewDetails(source)}
+              >
+                View Source Summary
+              </DropdownItem>
+            )}
             {(source.status === 'failed' || source.status === 'ready') && onReprocess && (
               <DropdownItem
                 icon={RefreshCw}

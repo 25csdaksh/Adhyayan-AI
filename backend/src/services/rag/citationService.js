@@ -1,5 +1,6 @@
 /**
  * Citation Parsing, Validation, and Mapping Service
+ * Extracts and maps source identifiers to verified chunk metadata (documents and web sources)
  */
 
 /**
@@ -40,12 +41,16 @@ function processCitations(rawAnswer = '', sourceMap = new Map()) {
         citations.push({
           citationNumber: currentCitationNumber,
           chunkId: sourceData.chunkId,
-          documentId: sourceData.documentId,
+          documentId: sourceData.documentId || null,
+          webSourceId: sourceData.webSourceId || null,
+          sourceKind: sourceData.sourceKind || (sourceData.webSourceId ? 'web' : 'notebook'),
           documentTitle: sourceData.documentTitle,
           sourceType: sourceData.sourceType,
-          pageNumber: sourceData.pageNumber,
-          pageStart: sourceData.pageStart,
-          pageEnd: sourceData.pageEnd,
+          pageNumber: sourceData.pageNumber || null,
+          pageStart: sourceData.pageStart || null,
+          pageEnd: sourceData.pageEnd || null,
+          url: sourceData.url || null,
+          domain: sourceData.domain || null,
           chunkIndex: sourceData.chunkIndex,
           snippet: sourceData.snippet || '',
         });
@@ -70,7 +75,10 @@ function processCitations(rawAnswer = '', sourceMap = new Map()) {
   });
 
   // Clean up any double spaces resulting from removed tags
-  const sanitizedAnswer = cleanAnswer.replace(/\s{2,}/g, ' ').replace(/\s+([.,;:!?])/g, '$1').trim();
+  const sanitizedAnswer = cleanAnswer
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([.,;:!?])/g, '$1')
+    .trim();
 
   return {
     cleanAnswer: sanitizedAnswer,

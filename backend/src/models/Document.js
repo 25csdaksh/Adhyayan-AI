@@ -73,6 +73,47 @@ const documentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    analysis: {
+      status: {
+        type: String,
+        enum: ['pending', 'processing', 'ready', 'failed'],
+        default: 'pending',
+      },
+      overview: {
+        type: String,
+        default: '',
+        maxlength: [5000, 'Overview exceeds maximum character limit'],
+      },
+      keyTopics: [{ type: String, trim: true }],
+      keyConcepts: [
+        {
+          term: { type: String, trim: true },
+          definition: { type: String, trim: true },
+          context: { type: String, trim: true },
+        },
+      ],
+      definitions: [
+        {
+          term: { type: String, trim: true },
+          definition: { type: String, trim: true },
+        },
+      ],
+      keyTakeaways: [{ type: String, trim: true }],
+      importantFacts: [{ type: String, trim: true }],
+      sections: [
+        {
+          title: { type: String, trim: true },
+          summary: { type: String, trim: true },
+          pageStart: { type: Number, default: null },
+          pageEnd: { type: Number, default: null },
+        },
+      ],
+      suggestedQuestions: [{ type: String, trim: true }],
+      generatedAt: { type: Date, default: null },
+      model: { type: String, default: '' },
+      sourceChunkIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Chunk' }],
+      error: { type: String, default: '' },
+    },
   },
   {
     timestamps: true,

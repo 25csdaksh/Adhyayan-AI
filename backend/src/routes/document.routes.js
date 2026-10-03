@@ -8,6 +8,9 @@ const {
   getDocumentChunks,
   updateDocument,
   deleteDocument,
+  getDocumentAnalysis,
+  triggerAnalyzeDocument,
+  getDocumentCoverage,
 } = require('../controllers/document.controller');
 const { authenticate } = require('../middlewares/auth');
 const { uploadMiddleware } = require('../middlewares/upload');
@@ -32,5 +35,8 @@ router.get('/:documentId/status', getDocumentStatus);
 router.post('/:documentId/process', reprocessDocument);
 router.post('/:documentId/embed', reprocessDocument);
 router.get('/:documentId/chunks', getDocumentChunks);
+router.get('/:documentId/analysis', getDocumentAnalysis);
+router.post('/:documentId/analyze', triggerAnalyzeDocument);
+router.get('/:documentId/coverage', getDocumentCoverage);
 
 module.exports = router;

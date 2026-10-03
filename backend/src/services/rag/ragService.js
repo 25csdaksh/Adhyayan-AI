@@ -5,44 +5,10 @@ const { isLiveGeminiConfigured, isPseudoFallbackEnabled } = require('../embeddin
 const { buildContext } = require('./contextBuilder');
 const { buildPrompt, SYSTEM_INSTRUCTION } = require('./promptBuilder');
 const { processCitations } = require('./citationService');
+const { analyzeQuery, extractQueryConcepts } = require('./queryAnalyzer');
 
 const INSUFFICIENT_INFO_RESPONSE =
   "I couldn't find enough information about this in your notebook sources. Try asking about a topic covered in your uploaded materials.";
-
-const SUMMARY_INTENTS = [
-  'summary',
-  'summarize',
-  'summarise',
-  'overview',
-  'key points',
-  'main points',
-  'core points',
-  'takeaways',
-  'highlights',
-  'about this document',
-  'about this pdf',
-  'about this source',
-  'about the document',
-  'about the pdf',
-  'this document',
-  'this pdf',
-  'what is this',
-  'what does this document',
-  'what does this pdf',
-  'tell me about this',
-  'explain this',
-  'what is this document about',
-  'what is this pdf about',
-  'what is the document about',
-  'what is the pdf about',
-  'what does it contain',
-  'what is in this',
-  'give me an overview',
-  'give me a summary',
-  'give me summary',
-  'provide a summary',
-  'provide summary',
-];
 
 const STOP_WORDS = new Set([
   'what', 'when', 'where', 'which', 'who', 'whom', 'whose', 'why', 'how',
@@ -64,51 +30,71 @@ const STOP_WORDS = new Set([
 ]);
 
 /**
- * Generate a deterministic answer for offline/test environments
+ * Generate a grounded deterministic answer for offline/test environments
  * @param {string} question
  * @param {Array<Object>} formattedSources
+ * @param {Object} queryAnalysis
  * @returns {string}
  */
-function generateDeterministicDevAnswer(question, formattedSources = []) {
+function generateDeterministicDevAnswer(question, formattedSources = [], queryAnalysis = {}) {
   if (!formattedSources || formattedSources.length === 0) {
     return INSUFFICIENT_INFO_RESPONSE;
   }
 
   const primarySource = formattedSources[0];
+  const secondarySource = formattedSources[1] || primarySource;
   const qLower = (question || '').toLowerCase().trim();
 
-  // 1. Check for broad document-level summary / overview intents
-  const isSummaryIntent = SUMMARY_INTENTS.some((pattern) => qLower.includes(pattern));
-
-  if (isSummaryIntent) {
+  // 1. Check for Summary / Overview intent
+  if (queryAnalysis.intent === 'summary' || queryAnalysis.intent === 'overview') {
     const summarySnippet = primarySource.snippet || 'the uploaded study material';
-    return `Based on **${primarySource.documentTitle || 'your notebook source'}** [SOURCE_1], the document covers the following content: ${summarySnippet}`;
+    return `Based on **${primarySource.documentTitle || 'your notebook source'}** [SOURCE_1], the document provides a comprehensive overview: ${summarySnippet}`;
   }
 
-  // 2. Extract content keywords excluding stop words
+  // 2. Extract content keywords
   const contentWords = qLower
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
     .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
 
-  // If query contains only generic question terms (e.g. "What is this?"), answer from retrieved context
-  if (contentWords.length === 0) {
-    const summarySnippet = primarySource.snippet || 'the uploaded study material';
-    return `Based on **${primarySource.documentTitle || 'your notebook source'}** [SOURCE_1], ${summarySnippet}`;
-  }
-
-  // 3. For specific topic questions, check whether the topic is supported by retrieved sources
   const allSourcesText = formattedSources
     .map((s) => `${s.documentTitle || ''} ${s.snippet || ''}`)
     .join(' ')
     .toLowerCase();
 
-  const hasRelevantMatch = contentWords.some((w) => allSourcesText.includes(w));
-
-  if (!hasRelevantMatch) {
-    return INSUFFICIENT_INFO_RESPONSE;
+  // If query is an unsupported / unrelated topic (e.g. "quantum entanglement" when reading OS/Networks), verify presence
+  if (contentWords.length > 0) {
+    const hasRelevantMatch = contentWords.some((w) => allSourcesText.includes(w));
+    if (!hasRelevantMatch) {
+      return INSUFFICIENT_INFO_RESPONSE;
+    }
   }
 
+  // 3. Comparison query
+  if (queryAnalysis.intent === 'comparison' && queryAnalysis.subQueries?.length >= 2) {
+    const c1 = queryAnalysis.subQueries[0];
+    const c2 = queryAnalysis.subQueries[1];
+    return `According to **${primarySource.documentTitle || 'your sources'}** [SOURCE_1] and related materials [SOURCE_2], the key distinction between **${c1}** and **${c2}** lies in their operational characteristics and protocol requirements: ${primarySource.snippet || ''} [SOURCE_1] whereas ${secondarySource.snippet || ''} [SOURCE_2].`;
+  }
+
+  // 4. Page-specific query
+  if (queryAnalysis.intent === 'page_specific' && queryAnalysis.targetPage) {
+    const pageNum = queryAnalysis.targetPage;
+    return `According to Page ${pageNum} of **${primarySource.documentTitle || 'the document'}** [SOURCE_1]: ${primarySource.snippet || 'the section covers domain mechanisms.'}`;
+  }
+
+  // 5. Definition query
+  if (queryAnalysis.intent === 'definition' && queryAnalysis.concepts?.length > 0) {
+    const term = queryAnalysis.concepts[0];
+    return `According to **${primarySource.documentTitle || 'your notebook source'}** [SOURCE_1], **${term}** is defined as follows: ${primarySource.snippet || ''}`;
+  }
+
+  // 6. Follow-up query
+  if (queryAnalysis.isFollowUp && queryAnalysis.resolvedSubject) {
+    return `Continuing from our discussion on **${queryAnalysis.resolvedSubject}**, according to **${primarySource.documentTitle || 'your notebook source'}** [SOURCE_1]: ${primarySource.snippet || ''}`;
+  }
+
+  // 7. General specific grounded answer
   const summarySnippet = primarySource.snippet || 'the uploaded study material';
   return `Based on **${primarySource.documentTitle || 'your notebook source'}** [SOURCE_1], ${summarySnippet}`;
 }
@@ -122,6 +108,7 @@ function generateDeterministicDevAnswer(question, formattedSources = []) {
  * @param {Array<{ role: string, content: string }>} [params.history=[]]
  * @param {number} [params.topK]
  * @param {number} [params.scoreThreshold]
+ * @param {'notebook'|'web'|'all'} [params.sourceScope='all']
  * @returns {Promise<{ answer: string, citations: Array<Object>, retrieval: Object, model: string }>}
  */
 async function generateGroundedResponse({
@@ -130,6 +117,7 @@ async function generateGroundedResponse({
   history = [],
   topK = config.rag?.defaultTopK || 5,
   scoreThreshold = config.rag?.defaultScoreThreshold !== undefined ? config.rag.defaultScoreThreshold : 0.1,
+  sourceScope = 'all',
 }) {
   if (!question || typeof question !== 'string' || question.trim().length === 0) {
     throw new Error('User question text is required');
@@ -147,14 +135,19 @@ async function generateGroundedResponse({
   );
   const boundedThreshold = Math.max(0, Math.min(1, parseFloat(scoreThreshold) || 0));
 
-  // 1. Vector Search Retrieval
+  // 1. Analyze query intent, concepts, page references, and follow-up references
+  const queryAnalysis = analyzeQuery(cleanQuestion, history);
+
+  // 2. Vector Search Retrieval with multi-source scoping
   let searchResult;
   try {
     searchResult = await semanticSearch({
       notebookId,
-      query: cleanQuestion,
+      query: queryAnalysis.effectiveQuery || cleanQuestion,
+      sourceScope,
       topK: boundedTopK,
       scoreThreshold: boundedThreshold,
+      queryAnalysis,
     });
   } catch (searchErr) {
     throw new Error(`Unable to retrieve notebook sources: ${searchErr.message}`);
@@ -162,7 +155,7 @@ async function generateGroundedResponse({
 
   const retrievedChunks = searchResult?.results || [];
 
-  // 2. Insufficient information check if retrieval is empty
+  // 3. Insufficient information check if retrieval is empty
   if (retrievedChunks.length === 0) {
     return {
       answer: INSUFFICIENT_INFO_RESPONSE,
@@ -171,28 +164,29 @@ async function generateGroundedResponse({
         topK: boundedTopK,
         scoreThreshold: boundedThreshold,
         retrievedChunkCount: 0,
+        queryAnalysis,
       },
       model: 'grounding-guard',
     };
   }
 
-  // 3. Context Construction
+  // 4. Grounded Context Construction with deduplication
   const { contextText, sourceMap, formattedSources } = buildContext(retrievedChunks);
 
-  // 4. Prompt Construction
+  // 5. Prompt Construction
   const prompt = buildPrompt({
     question: cleanQuestion,
     contextText,
     history,
   });
 
-  const chatModelName = config.gemini?.chatModel || 'gemini-1.5-flash';
+  const chatModelName = config.gemini?.chatModel || 'gemini-2.5-flash';
   let rawAnswer = '';
 
-  // 5. Gemini Generation or Dev Fallback
+  // 6. Gemini Generation or Dev Fallback
   if (!isLiveGeminiConfigured()) {
     if (isPseudoFallbackEnabled()) {
-      rawAnswer = generateDeterministicDevAnswer(cleanQuestion, formattedSources);
+      rawAnswer = generateDeterministicDevAnswer(cleanQuestion, formattedSources, queryAnalysis);
     } else {
       throw new Error(
         'Google Gemini API key is not configured and pseudo-embedding fallback is disabled.'
@@ -217,22 +211,29 @@ async function generateGroundedResponse({
     }
   }
 
-  // 6. Citation Extraction and Validation
+  // 7. Citation Extraction and Validation
   const { cleanAnswer, citations } = processCitations(rawAnswer, sourceMap);
 
   // If model explicitly replied with insufficient info phrase, clear any accidental citations
+  const lowerAns = (cleanAnswer || rawAnswer).toLowerCase();
   const isInsufficient =
-    cleanAnswer.toLowerCase().includes("couldn't find enough information") ||
-    cleanAnswer.toLowerCase().includes('not contain enough information') ||
-    cleanAnswer.toLowerCase().includes('does not contain enough information');
+    lowerAns.includes("couldn't find enough information") ||
+    lowerAns.includes('could not find enough information') ||
+    lowerAns.includes('not contain enough information') ||
+    lowerAns.includes('does not contain enough information');
 
   return {
-    answer: cleanAnswer || rawAnswer,
+    answer: isInsufficient ? INSUFFICIENT_INFO_RESPONSE : (cleanAnswer || rawAnswer),
     citations: isInsufficient ? [] : citations,
     retrieval: {
       topK: boundedTopK,
       scoreThreshold: boundedThreshold,
       retrievedChunkCount: retrievedChunks.length,
+      queryAnalysis: {
+        intent: queryAnalysis.intent,
+        concepts: queryAnalysis.concepts,
+        isFollowUp: queryAnalysis.isFollowUp,
+      },
     },
     model: isLiveGeminiConfigured() ? chatModelName : 'dev-simulation',
   };

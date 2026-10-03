@@ -49,6 +49,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { DeleteSourceModal } from '../components/sources/DeleteSourceModal';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Globe, Compass } from 'lucide-react';
+import { SourceSummaryModal } from '../components/sources/SourceSummaryModal';
 
 export const NotebookWorkspacePage = () => {
   const { id } = useParams();
@@ -79,6 +80,7 @@ export const NotebookWorkspacePage = () => {
   const [isDeletingSource, setIsDeletingSource] = useState(false);
   const [refreshingWebSourceId, setRefreshingWebSourceId] = useState(null);
   const [selectedSourceSnippet, setSelectedSourceSnippet] = useState(null);
+  const [summaryModalDoc, setSummaryModalDoc] = useState(null);
 
   // Responsive workspace tab state for tablet & mobile
   const [mobileActivePanel, setMobileActivePanel] = useState('chat'); // 'sources' | 'chat' | 'tools'
@@ -689,6 +691,7 @@ export const NotebookWorkspacePage = () => {
                       source={source}
                       onRemove={handleDeleteSourceClick}
                       onReprocess={handleReprocessSource}
+                      onViewDetails={(s) => setSummaryModalDoc(s)}
                       onViewSnippet={(s) => setSelectedSourceSnippet(s)}
                     />
                   ))}
@@ -978,6 +981,15 @@ export const NotebookWorkspacePage = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Structured Source Intelligence & Summary Modal */}
+      <SourceSummaryModal
+        isOpen={Boolean(summaryModalDoc)}
+        onClose={() => setSummaryModalDoc(null)}
+        document={summaryModalDoc}
+        notebookId={id}
+        onAskQuestion={(q) => handleSendMessage(q)}
+      />
     </div>
   );
 };

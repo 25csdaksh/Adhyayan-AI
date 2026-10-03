@@ -144,6 +144,11 @@ async function processDocument(documentId, options = {}) {
     };
 
     await document.save();
+
+    // Trigger async source intelligence analysis (Phase 10)
+    const { triggerAsyncDocumentAnalysis } = require('../sourceIntelligence/sourceAnalyzer');
+    triggerAsyncDocumentAnalysis(document._id);
+
     return document;
   } catch (processingErr) {
     const safeErrorMessage =

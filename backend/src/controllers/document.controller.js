@@ -426,6 +426,91 @@ const deleteDocument = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, null, 'Document deleted successfully', 200);
 });
 
+/**
+ * @desc Get structured source analysis for a document
+ * @route GET /api/notebooks/:notebookId/documents/:documentId/analysis
+ * @access Private (Authenticated & Notebook Owner)
+ */
+const getDocumentAnalysis = asyncHandler(async (req, res) => {
+  const { notebookId, documentId } = req.params;
+  const notebook = await verifyNotebookOwnership(notebookId, req.user._id);
+
+  if (!mongoose.Types.ObjectId.isValid(documentId)) {
+    throw new ApiError(400, 'Invalid document ID format');
+  }
+
+  const document = await Document.findOne({
+    _id: documentId,
+    notebookId: notebook._id,
+  });
+
+  if (!document) {
+    throw new ApiError(404, 'Document not found');
+  }
+
+  // If analysis is already ready or failed, return it
+  if (document.analysis?.status === 'ready' || document.analysis?.status === 'processing') {
+    return ApiResponse.success(res, { analysis: document.analysis }, 'Document analysis retrieved', 200);
+  }
+
+  // If document is ready and analysis not yet run, generate or return
+  const { analyzeDocument } = require('../services/sourceIntelligence/sourceAnalyzer');
+  const analysis = await analyzeDocument(document._id);
+
+  return ApiResponse.success(res, { analysis }, 'Document analysis retrieved', 200);
+});
+
+/**
+ * @desc Manually trigger or regenerate source analysis for a document
+ * @route POST /api/notebooks/:notebookId/documents/:documentId/analyze
+ * @access Private (Authenticated & Notebook Owner)
+ */
+const triggerAnalyzeDocument = asyncHandler(async (req, res) => {
+  const { notebookId, documentId } = req.params;
+  const notebook = await verifyNotebookOwnership(notebookId, req.user._id);
+
+  if (!mongoose.Types.ObjectId.isValid(documentId)) {
+    throw new ApiError(400, 'Invalid document ID format');
+  }
+
+  const document = await Document.findOne({
+    _id: documentId,
+    notebookId: notebook._id,
+  });
+
+  if (!document) {
+    throw new ApiError(404, 'Document not found');
+  }
+
+  if (document.status !== 'ready') {
+    throw new ApiError(400, 'Document must be in ready status before running analysis');
+  }
+
+  const { analyzeDocument } = require('../services/sourceIntelligence/sourceAnalyzer');
+  const analysis = await analyzeDocument(document._id, { forceReanalyze: true });
+
+  return ApiResponse.success(res, { analysis }, 'Document analysis generated', 200);
+});
+
+/**
+ * @desc Get source coverage and indexing diagnostics for a document
+ * @route GET /api/notebooks/:notebookId/documents/:documentId/coverage
+ * @access Private (Authenticated & Notebook Owner)
+ */
+const getDocumentCoverage = asyncHandler(async (req, res) => {
+  const { notebookId, documentId } = req.params;
+  const notebook = await verifyNotebookOwnership(notebookId, req.user._id);
+
+  if (!mongoose.Types.ObjectId.isValid(documentId)) {
+    throw new ApiError(400, 'Invalid document ID format');
+  }
+
+  const { checkDocumentCoverage } = require('../services/sourceIntelligence/sourceCoverageService');
+  const coverage = await checkDocumentCoverage(documentId, notebook._id);
+
+  return ApiResponse.success(res, { coverage }, 'Document coverage retrieved', 200);
+});
+
 module.exports = {
   createDocument,
   getDocuments,
@@ -435,5 +520,8 @@ module.exports = {
   getDocumentChunks,
   updateDocument,
   deleteDocument,
+  getDocumentAnalysis,
+  triggerAnalyzeDocument,
+  getDocumentCoverage,
   verifyNotebookOwnership,
 };
