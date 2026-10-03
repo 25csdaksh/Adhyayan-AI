@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const billingController = require('../controllers/billing.controller');
-const authenticate = require('../middlewares/auth');
+const { authenticate } = require('../middlewares/auth');
 
 // Public / Authenticated Plan Catalog
 router.get('/plans', billingController.getPlans);
