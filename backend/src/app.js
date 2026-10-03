@@ -61,8 +61,15 @@ app.use(requestLogger);
 // Request execution timeout
 app.use(requestTimeout(90000));
 
-// Body parsers
-app.use(express.json({ limit: '10mb' }));
+// Body parsers with rawBody capture for webhook signature verification
+app.use(
+  express.json({
+    limit: '10mb',
+    verify: (req, res, buf) => {
+      req.rawBody = buf.toString('utf8');
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // NoSQL Operator Injection Sanitizer

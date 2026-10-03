@@ -4,6 +4,7 @@ const authRoutes = require('./auth.routes');
 const notebookRoutes = require('./notebook.routes');
 const userMemoryRoutes = require('./userMemory.routes');
 const userRoutes = require('./user.routes');
+const billingRoutes = require('./billing.routes');
 
 const router = express.Router();
 
@@ -11,6 +12,7 @@ const router = express.Router();
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
+router.use('/billing', billingRoutes);
 router.use('/memory', userMemoryRoutes);
 router.use('/notebooks', notebookRoutes);
 

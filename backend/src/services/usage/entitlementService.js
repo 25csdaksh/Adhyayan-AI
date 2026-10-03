@@ -3,78 +3,23 @@ const Notebook = require('../../models/Notebook');
 const Document = require('../../models/Document');
 const WebSource = require('../../models/WebSource');
 const User = require('../../models/User');
-
-const PLAN_CONFIGS = {
-  free: {
-    name: 'Free Starter',
-    maxNotebooks: parseInt(process.env.LIMIT_FREE_NOTEBOOKS, 10) || 15,
-    maxSourcesPerNotebook: parseInt(process.env.LIMIT_FREE_SOURCES_PER_NOTEBOOK, 10) || 30,
-    maxFileSizeMB: parseInt(process.env.LIMIT_FREE_MAX_FILE_SIZE_MB, 10) || 25,
-    monthlyAiRequests: parseInt(process.env.LIMIT_FREE_MONTHLY_AI, 10) || 300,
-    monthlyResearchSessions: parseInt(process.env.LIMIT_FREE_MONTHLY_RESEARCH, 10) || 30,
-    monthlyStudyTools: parseInt(process.env.LIMIT_FREE_MONTHLY_STUDY_TOOLS, 10) || 60,
-    features: {
-      ragChat: true,
-      webResearch: true,
-      deepResearch: true,
-      sourceAnalysis: true,
-      studyTools: true,
-      researchMemory: true,
-      citationDeepLinks: true,
-      universalSearch: true,
-      dataExport: true,
-    },
-  },
-  pro: {
-    name: 'Pro Researcher',
-    maxNotebooks: parseInt(process.env.LIMIT_PRO_NOTEBOOKS, 10) || 100,
-    maxSourcesPerNotebook: parseInt(process.env.LIMIT_PRO_SOURCES_PER_NOTEBOOK, 10) || 200,
-    maxFileSizeMB: parseInt(process.env.LIMIT_PRO_MAX_FILE_SIZE_MB, 10) || 100,
-    monthlyAiRequests: parseInt(process.env.LIMIT_PRO_MONTHLY_AI, 10) || 3000,
-    monthlyResearchSessions: parseInt(process.env.LIMIT_PRO_MONTHLY_RESEARCH, 10) || 500,
-    monthlyStudyTools: parseInt(process.env.LIMIT_PRO_MONTHLY_STUDY_TOOLS, 10) || 1000,
-    features: {
-      ragChat: true,
-      webResearch: true,
-      deepResearch: true,
-      sourceAnalysis: true,
-      studyTools: true,
-      researchMemory: true,
-      citationDeepLinks: true,
-      universalSearch: true,
-      dataExport: true,
-      priorityProcessing: true,
-    },
-  },
-  enterprise: {
-    name: 'Enterprise Academic',
-    maxNotebooks: 1000,
-    maxSourcesPerNotebook: 1000,
-    maxFileSizeMB: 250,
-    monthlyAiRequests: 25000,
-    monthlyResearchSessions: 5000,
-    monthlyStudyTools: 10000,
-    features: {
-      ragChat: true,
-      webResearch: true,
-      deepResearch: true,
-      sourceAnalysis: true,
-      studyTools: true,
-      researchMemory: true,
-      citationDeepLinks: true,
-      universalSearch: true,
-      dataExport: true,
-      priorityProcessing: true,
-      teamCollaboration: true,
-    },
-  },
-};
+const { PLANS, getPlan } = require('../../config/plans');
 
 /**
  * Get plan configuration for a user plan
  */
 function getPlanConfig(plan = 'free') {
-  return PLAN_CONFIGS[plan] || PLAN_CONFIGS.free;
+  const p = getPlan(plan);
+  return {
+    name: p.name,
+    maxNotebooks: p.quotas.maxNotebooks,
+    maxSourcesPerNotebook: p.quotas.maxSourcesPerNotebook,
+    maxFileSizeMB: p.quotas.maxFileSizeMB,
+    monthlyAiRequests: p.quotas.monthlyAiRequests,
+    monthlyResearchSessions: p.quotas.monthlyResearchSessions,
+    monthlyStudyTools: p.quotas.monthlyStudyTools,
+    features: p.features,
+  };
 }
 
 /**
@@ -252,8 +197,12 @@ async function getUserUsageSummary(userId) {
   };
 }
 
+const PLAN_CONFIGS = PLANS;
+
 module.exports = {
+  PLANS,
   PLAN_CONFIGS,
+  getPlan,
   getPlanConfig,
   canUseFeature,
   recordUsage,

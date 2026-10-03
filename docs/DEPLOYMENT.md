@@ -43,6 +43,15 @@ LIMIT_FREE_SOURCES_PER_NOTEBOOK=30
 LIMIT_FREE_MONTHLY_AI=300
 LIMIT_FREE_MONTHLY_RESEARCH=30
 LIMIT_FREE_MONTHLY_STUDY_TOOLS=60
+
+# Subscription & Billing Configuration
+PAYMENT_PROVIDER=razorpay
+PAYMENT_CURRENCY=INR
+RAZORPAY_KEY_ID=<your_razorpay_key_id>
+RAZORPAY_KEY_SECRET=<your_razorpay_key_secret>
+RAZORPAY_WEBHOOK_SECRET=<your_razorpay_webhook_secret>
+PRO_PLAN_PRICE_INR=999
+ENTERPRISE_PLAN_PRICE_INR=4999
 ```
 
 ### Frontend Configuration (`frontend/.env.production`)

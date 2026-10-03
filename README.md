@@ -4,7 +4,7 @@
 
 ---
 
-## 📌 Status: Phase 15 Completed (Production Productization & Launch Readiness)
+## 📌 Status: Phase 16 Completed (Production Subscription, Billing & Monetization)
 
 - **Phase 01:** Foundation, Monorepo, Express Backend, MongoDB, CORS, `/api/health` *(Verified)*
 - **Phase 02:** Light-First Academic UI/UX, Design System, Landing Page, Dashboard, 3-Panel Workspace, Chat UI, Source Management, Settings, Profile *(Verified)*
@@ -21,6 +21,7 @@
 - **Phase 13:** Personal Research Memory + Advanced Knowledge UX (User & Notebook Memory, Source Relationships, Deep-Link Citation Previews, Saved Insights, Bookmarks, Universal Search, Knowledge Overview, Activity Timeline, Personalized Study Recommendations) *(Verified)*
 - **Phase 14:** Advanced AI Research & Knowledge Synthesis (Intent Classification, Bounded Planning, Multi-Query Retrieval, Provenance Validation, Claim-Evidence Matrix, Contradiction Detection, Knowledge Gaps, Academic Reports, Markdown/Text Export) *(Verified)*
 - **Phase 15:** Production Productization & Launch Readiness (First-Time Onboarding Tour, Usage Quotas & Metrics Dashboard, Subscription-Ready Entitlements, Sanitized Self-Service Data Export, Cascading Account Purge, BCrypt Password Security, Production Deployment Docs) *(Verified)*
+- **Phase 16:** Production Subscription, Billing & Monetization (Payment Gateway Abstraction, Razorpay Production & Mock Test Integration, Server-Authoritative Checkout, Cryptographic HMAC Verification, Idempotent Webhooks, Entitlement Synchronization, Quota Enforcement & Full UI) *(Verified)*
 
 
 
@@ -762,3 +763,18 @@ npm run install:all
   - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
   - [`docs/USAGE_LIMITS.md`](docs/USAGE_LIMITS.md)
   - [`docs/PRIVACY.md`](docs/PRIVACY.md)
+
+---
+
+## 💳 Phase 16 Subscription, Billing & Monetization Architecture
+
+- **Payment Gateway Abstraction (`providerFactory.js`):** Pluggable provider layer supporting Razorpay for India/international card/UPI processing and zero-credentials Mock Billing for test/sandbox automation.
+- **Server-Authoritative Checkout (`billingService.js`):** Immutable plan catalogs with cryptographic checkout sessions preventing client-side amount tampering.
+- **Cryptographic Verification & Webhooks:** Timing-safe HMAC-SHA256 signature checks on both client payment receipts and asynchronous gateway webhooks.
+- **Idempotent Billing Events (`BillingEvent.js`):** Unique event ID enforcement preventing replay attacks and duplicate subscription activations.
+- **Entitlement Synchronization (`entitlementSync.js`):** Real-time subscription state resolution mapping active, canceled grace periods, past-due, and expired tiers directly to user quotas.
+- **Production Documentation:**
+  - [`docs/BILLING.md`](docs/BILLING.md)
+  - [`docs/PLANS.md`](docs/PLANS.md)
+  - [`docs/PAYMENT_SECURITY.md`](docs/PAYMENT_SECURITY.md)
+  - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)

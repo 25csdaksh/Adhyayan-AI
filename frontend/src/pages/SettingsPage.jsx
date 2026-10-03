@@ -17,6 +17,11 @@ import {
   FileText,
   Clock,
   Loader2,
+  CreditCard,
+  CheckCircle2,
+  XCircle,
+  ArrowRight,
+  RefreshCw,
 } from 'lucide-react';
 import { Tabs } from '../components/ui/Tabs';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/Card';
@@ -27,6 +32,7 @@ import { Modal } from '../components/ui/Modal';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../api/userService';
+import { billingService } from '../api/billingService';
 import { useNavigate } from 'react-router-dom';
 
 export const SettingsPage = () => {
@@ -46,6 +52,15 @@ export const SettingsPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
+  // Billing & Plans State
+  const [plans, setPlans] = useState([]);
+  const [subscription, setSubscription] = useState(null);
+  const [payments, setPayments] = useState([]);
+  const [loadingBilling, setLoadingBilling] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
+
   // Usage State
   const [usageData, setUsageData] = useState(null);
   const [loadingUsage, setLoadingUsage] = useState(false);
@@ -64,8 +79,28 @@ export const SettingsPage = () => {
     }
   }, [user]);
 
+  const loadBillingData = async () => {
+    setLoadingBilling(true);
+    try {
+      const [plansData, subData, payData] = await Promise.all([
+        billingService.getPlans().catch(() => []),
+        billingService.getSubscription().catch(() => null),
+        billingService.getPayments().catch(() => []),
+      ]);
+      setPlans(plansData);
+      setSubscription(subData);
+      setPayments(payData);
+    } catch {
+      toast.error('Failed to load billing information');
+    } finally {
+      setLoadingBilling(false);
+    }
+  };
+
   useEffect(() => {
-    if (activeTab === 'usage') {
+    if (activeTab === 'plans') {
+      loadBillingData();
+    } else if (activeTab === 'usage') {
       const loadUsage = async () => {
         setLoadingUsage(true);
         try {
@@ -101,16 +136,16 @@ export const SettingsPage = () => {
 
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
-    if (!currentPassword || !newPassword) {
-      toast.error('Please enter your current and new password');
-      return;
-    }
-    if (newPassword.length < 8) {
-      toast.error('New password must be at least 8 characters long');
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error('Please fill in all password fields');
       return;
     }
     if (newPassword !== confirmPassword) {
       toast.error('New passwords do not match');
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters long');
       return;
     }
 
@@ -128,154 +163,223 @@ export const SettingsPage = () => {
     }
   };
 
+  const handleUpgrade = async (planKey) => {
+    if (planKey === 'free' || planKey === subscription?.plan) return;
+
+    setIsCheckingOut(true);
+    try {
+      const checkoutData = await billingService.checkout(planKey);
+
+      // Check if Razorpay script is available or in production mode
+      if (window.Razorpay && checkoutData.keyId && checkoutData.keyId !== 'mock_key_id') {
+        const options = {
+          key: checkoutData.keyId,
+          amount: checkoutData.amountInPaise,
+          currency: checkoutData.currency,
+          name: 'StudyLM',
+          description: `Subscription: ${checkoutData.planName}`,
+          order_id: checkoutData.orderId,
+          prefill: checkoutData.prefill,
+          theme: { color: '#1F5E4B' },
+          handler: async (response) => {
+            try {
+              await billingService.verifyPayment({
+                orderId: response.razorpay_order_id || checkoutData.orderId,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+                planKey,
+              });
+              toast.success(`Successfully upgraded to ${checkoutData.planName}!`);
+              loadBillingData();
+            } catch (err) {
+              toast.error(err.message || 'Payment verification failed');
+            }
+          },
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      } else {
+        // Safe Simulation / Sandbox verification for Test Mode
+        await billingService.verifyPayment({
+          orderId: checkoutData.orderId,
+          paymentId: `pay_sim_${Date.now()}`,
+          signature: 'mock_valid_sig',
+          planKey,
+        });
+        toast.success(`Successfully activated ${checkoutData.planName}!`);
+        loadBillingData();
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to initiate checkout');
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    setIsCanceling(true);
+    try {
+      await billingService.cancelSubscription(false);
+      toast.success('Subscription scheduled to cancel at end of billing cycle');
+      setCancelModalOpen(false);
+      loadBillingData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to cancel subscription');
+    } finally {
+      setIsCanceling(false);
+    }
+  };
+
+  const handleResumeSubscription = async () => {
+    try {
+      await billingService.resumeSubscription();
+      toast.success('Subscription resumed successfully');
+      loadBillingData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to resume subscription');
+    }
+  };
+
   const handleExportData = async () => {
     setIsExporting(true);
     try {
-      const res = await userService.exportData();
-      if (res?.data?.data) {
-        const jsonStr = JSON.stringify(res.data.data, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `studylm-data-export-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        toast.success('User data archive exported successfully');
-      }
+      const data = await userService.exportData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `studylm-research-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Data exported successfully');
     } catch {
-      toast.error('Failed to export user data archive');
+      toast.error('Failed to export data');
     } finally {
       setIsExporting(false);
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (deleteConfirmationText !== 'DELETE') {
-      toast.error('Please type DELETE to confirm account deletion');
-      return;
-    }
-
+    if (deleteConfirmationText !== 'DELETE') return;
     setIsDeletingAccount(true);
     try {
       await userService.deleteAccount();
-      toast.success('Your account and all associated data have been permanently deleted');
-      setDeleteModalOpen(false);
+      toast.success('Account and all associated data permanently deleted');
       logout();
-      navigate('/register');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to delete account');
+      navigate('/');
+    } catch {
+      toast.error('Failed to delete account');
       setIsDeletingAccount(false);
     }
   };
 
   const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'security', label: 'Security', icon: Lock },
-    { id: 'usage', label: 'Plan & Quotas', icon: BarChart3 },
-    { id: 'privacy', label: 'Data & Privacy', icon: Shield },
+    { id: 'profile', label: 'User Profile', icon: User },
+    { id: 'security', label: 'Security & Password', icon: Shield },
+    { id: 'plans', label: 'Plan & Billing', icon: CreditCard },
+    { id: 'usage', label: 'Usage & Quotas', icon: BarChart3 },
+    { id: 'privacy', label: 'Data & Privacy', icon: Lock },
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-150">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#17211D]">Account Settings</h1>
-        <p className="text-xs sm:text-sm text-[#6B756F] mt-1">
-          Manage your research profile, security credentials, resource quotas, and privacy controls.
+    <div className="max-w-5xl mx-auto space-y-6 pb-12">
+      {/* Page Header */}
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight text-[#17211D]">Account Settings &amp; Subscription</h1>
+        <p className="text-sm text-[#6B756F]">
+          Manage your research profile, credentials, subscription plan, usage quotas, and data privacy.
         </p>
       </div>
 
-      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} variant="underline" />
+      {/* Tabs Navigation */}
+      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-      {/* 1. Profile Settings */}
+      {/* 1. User Profile */}
       {activeTab === 'profile' && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Research Profile</CardTitle>
-                <CardDescription>Your personal academic identity in StudyLM.</CardDescription>
-              </div>
-              <Badge variant="forest" size="md">
-                Plan: {(user?.plan || 'Free').toUpperCase()}
-              </Badge>
-            </div>
+            <CardTitle>Profile Details</CardTitle>
+            <CardDescription>Update your personal information and display preferences.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[#17211D]">Full Name</label>
               <Input
-                label="Full Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your name"
+                className="max-w-md"
               />
-              <Input
-                label="Email Address"
-                value={user?.email || ''}
-                disabled
-                helperText="Email cannot be modified directly"
-              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[#17211D]">Email Address</label>
+              <Input value={user?.email || ''} disabled className="max-w-md bg-[#F2F4F2] text-[#6B756F]" />
+              <p className="text-[11px] text-[#6B756F]">Email address is managed permanently on your account.</p>
             </div>
           </CardContent>
           <CardFooter>
-            <span className="text-xs text-[#6B756F]">Your profile name is displayed across workspaces.</span>
             <Button
               variant="primary"
               size="sm"
-              onClick={handleSaveProfile}
-              disabled={isSavingProfile}
               leftIcon={isSavingProfile ? Loader2 : Save}
+              disabled={isSavingProfile}
+              onClick={handleSaveProfile}
             >
-              {isSavingProfile ? 'Saving...' : 'Save Profile'}
+              {isSavingProfile ? 'Saving...' : 'Save Changes'}
             </Button>
           </CardFooter>
         </Card>
       )}
 
-      {/* 2. Security Settings */}
+      {/* 2. Security & Password */}
       {activeTab === 'security' && (
         <Card>
           <CardHeader>
-            <CardTitle>Security & Credentials</CardTitle>
-            <CardDescription>Update your account password and security keys.</CardDescription>
+            <CardTitle>Change Password</CardTitle>
+            <CardDescription>Update your account password with standard BCrypt encryption.</CardDescription>
           </CardHeader>
           <form onSubmit={handleUpdatePassword}>
             <CardContent className="space-y-4 max-w-md">
-              <Input
-                label="Current Password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-              />
-              <Input
-                label="New Password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Minimum 8 characters"
-                required
-              />
-              <Input
-                label="Confirm New Password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-              />
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-[#17211D]">Current Password</label>
+                <Input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-[#17211D]">New Password (min. 8 characters)</label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-[#17211D]">Confirm New Password</label>
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
             </CardContent>
             <CardFooter>
-              <span className="text-xs text-[#6B756F]">Passwords are salted with Bcrypt at cost factor 12.</span>
               <Button
                 type="submit"
                 variant="primary"
                 size="sm"
-                disabled={isUpdatingPassword}
                 leftIcon={isUpdatingPassword ? Loader2 : Key}
+                disabled={isUpdatingPassword}
               >
                 {isUpdatingPassword ? 'Updating...' : 'Update Password'}
               </Button>
@@ -284,19 +388,211 @@ export const SettingsPage = () => {
         </Card>
       )}
 
-      {/* 3. Usage & Plan Quotas */}
+      {/* 3. Plan & Billing */}
+      {activeTab === 'plans' && (
+        <div className="space-y-6">
+          {/* Active Subscription Summary */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle>Current Subscription</CardTitle>
+                <CardDescription>Your active billing plan and renewal status</CardDescription>
+              </div>
+              {subscription && (
+                <Badge variant={subscription.plan === 'pro' || subscription.plan === 'enterprise' ? 'primary' : 'neutral'}>
+                  {subscription.planName || 'Free Starter'}
+                </Badge>
+              )}
+            </CardHeader>
+            <CardContent>
+              {loadingBilling ? (
+                <div className="py-6 text-center space-y-2">
+                  <div className="w-8 h-8 rounded-full border-2 border-[#1F5E4B] border-t-transparent animate-spin mx-auto" />
+                  <p className="text-xs text-[#6B756F]">Loading subscription details...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-xl bg-[#FAFBF9] border border-[#E2E7E3] space-y-1">
+                    <span className="text-xs text-[#6B756F]">Current Tier</span>
+                    <p className="text-lg font-bold text-[#17211D]">{subscription?.planName || 'Free Starter'}</p>
+                    <p className="text-xs text-[#1F5E4B] font-medium">
+                      {subscription?.amount ? `₹${subscription.amount} / ${subscription.billingCycle}` : 'Free Forever'}
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#FAFBF9] border border-[#E2E7E3] space-y-1">
+                    <span className="text-xs text-[#6B756F]">Status</span>
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      {subscription?.cancelAtPeriodEnd ? (
+                        <Badge variant="warning">Cancels at Period End</Badge>
+                      ) : subscription?.status === 'active' ? (
+                        <Badge variant="primary">Active &amp; Renews</Badge>
+                      ) : (
+                        <Badge variant="neutral">Active (Free)</Badge>
+                      )}
+                    </div>
+                    {subscription?.currentPeriodEnd && (
+                      <p className="text-[11px] text-[#6B756F]">
+                        {subscription.daysRemaining} days remaining (renews {new Date(subscription.currentPeriodEnd).toLocaleDateString()})
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#FAFBF9] border border-[#E2E7E3] flex flex-col justify-center gap-2">
+                    {subscription?.cancelAtPeriodEnd ? (
+                      <Button variant="outline" size="sm" onClick={handleResumeSubscription} leftIcon={RefreshCw}>
+                        Resume Subscription
+                      </Button>
+                    ) : subscription?.isPaid ? (
+                      <Button variant="outline" size="sm" onClick={() => setCancelModalOpen(true)} className="text-rose-600 border-rose-200 hover:bg-rose-50">
+                        Cancel Subscription
+                      </Button>
+                    ) : (
+                      <Button variant="primary" size="sm" onClick={() => handleUpgrade('pro')} leftIcon={Sparkles} disabled={isCheckingOut}>
+                        {isCheckingOut ? 'Loading...' : 'Upgrade to Pro'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Pricing Catalog & Plan Comparison */}
+          <div className="space-y-3">
+            <h3 className="text-base font-bold text-[#17211D]">Choose the Right Plan for Your Research</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {plans.map((p) => {
+                const isCurrent = subscription?.plan === p.key;
+                return (
+                  <div
+                    key={p.key}
+                    className={`p-5 rounded-2xl border flex flex-col justify-between transition-all ${
+                      p.popular
+                        ? 'border-[#1F5E4B] bg-[#FAFBF9] shadow-sm relative'
+                        : 'border-[#E2E7E3] bg-white'
+                    }`}
+                  >
+                    {p.popular && (
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#1F5E4B] text-white text-[10px] font-bold tracking-wide uppercase">
+                        Most Popular
+                      </span>
+                    )}
+
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <h4 className="font-bold text-[#17211D] text-lg">{p.name}</h4>
+                        <p className="text-xs text-[#6B756F] leading-relaxed">{p.description}</p>
+                      </div>
+
+                      <div className="pt-2">
+                        <span className="text-3xl font-extrabold text-[#17211D]">{p.priceFormatted}</span>
+                        {p.interval !== 'forever' && (
+                          <span className="text-xs text-[#6B756F]"> / {p.interval}</span>
+                        )}
+                      </div>
+
+                      <ul className="space-y-2 pt-2 border-t border-[#E2E7E3]/60">
+                        {p.featureList.map((feat, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-xs text-[#17211D]">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#1F5E4B] shrink-0 mt-0.5" />
+                            <span>{feat}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="pt-6">
+                      {isCurrent ? (
+                        <Button variant="outline" size="sm" className="w-full bg-[#E2E7E3]/30 cursor-default" disabled>
+                          Current Plan
+                        </Button>
+                      ) : p.key === 'free' ? (
+                        <Button variant="outline" size="sm" className="w-full" disabled>
+                          Default Free Tier
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="w-full"
+                          disabled={isCheckingOut}
+                          onClick={() => handleUpgrade(p.key)}
+                          rightIcon={ArrowRight}
+                        >
+                          {isCheckingOut ? 'Opening Checkout...' : `Upgrade to ${p.name}`}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Payment Transaction History */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment &amp; Invoice History</CardTitle>
+              <CardDescription>Past billing transactions and verified gateway receipts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {payments.length === 0 ? (
+                <p className="text-xs text-[#6B756F] py-4 text-center">No payment history recorded yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[#E2E7E3] text-[#6B756F]">
+                        <th className="py-2.5 px-3 font-semibold">Date</th>
+                        <th className="py-2.5 px-3 font-semibold">Order / Reference</th>
+                        <th className="py-2.5 px-3 font-semibold">Amount</th>
+                        <th className="py-2.5 px-3 font-semibold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E2E7E3]/60">
+                      {payments.map((pay) => (
+                        <tr key={pay.id}>
+                          <td className="py-3 px-3 text-[#17211D]">
+                            {new Date(pay.paidAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-3 font-mono text-[11px] text-[#6B756F]">
+                            {pay.paymentId || pay.orderId || 'Direct'}
+                          </td>
+                          <td className="py-3 px-3 font-semibold text-[#17211D]">
+                            ₹{pay.amount} {pay.currency}
+                          </td>
+                          <td className="py-3 px-3">
+                            <Badge variant={pay.status === 'captured' ? 'primary' : 'warning'}>
+                              {pay.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* 4. Usage & Quotas */}
       {activeTab === 'usage' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Resource Quotas & AI Usage</CardTitle>
-                  <CardDescription>Monthly allocation for your {usageData?.user?.planName || 'Free'} plan.</CardDescription>
+                  <CardTitle>Monthly AI &amp; Research Quotas</CardTitle>
+                  <CardDescription>Real-time tracked usage against your active plan limits.</CardDescription>
                 </div>
-                <Badge variant="forest" size="md">
-                  Active Tier: {usageData?.user?.planName || 'Free'}
-                </Badge>
+                {usageData && (
+                  <Badge variant="primary" className="text-xs">
+                    Plan: {usageData.user.planName}
+                  </Badge>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -407,7 +703,7 @@ export const SettingsPage = () => {
         </div>
       )}
 
-      {/* 4. Data & Privacy */}
+      {/* 5. Data & Privacy */}
       {activeTab === 'privacy' && (
         <Card>
           <CardHeader>
@@ -419,7 +715,7 @@ export const SettingsPage = () => {
               <div className="space-y-0.5">
                 <p className="text-sm font-bold text-[#17211D]">Export All Research Data</p>
                 <p className="text-xs text-[#6B756F]">
-                  Download a structured JSON archive containing your notebooks, sources metadata, saved insights, bookmarks, and research sessions.
+                  Download a structured JSON archive containing your notebooks, sources metadata, subscriptions, saved insights, bookmarks, and research sessions.
                 </p>
               </div>
               <Button
@@ -437,7 +733,7 @@ export const SettingsPage = () => {
               <div className="space-y-0.5">
                 <p className="text-sm font-bold text-rose-900">Permanently Delete Account &amp; All Data</p>
                 <p className="text-xs text-rose-700">
-                  Cascading deletion of all vector embeddings, documents, chats, study tools, research sessions, and account credentials.
+                  Cascading deletion of all subscriptions, vector embeddings, documents, chats, study tools, research sessions, and account credentials.
                 </p>
               </div>
               <Button
@@ -455,6 +751,39 @@ export const SettingsPage = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Subscription Cancellation Modal */}
+      <Modal
+        isOpen={cancelModalOpen}
+        onClose={() => setCancelModalOpen(false)}
+        title="Cancel Subscription?"
+        size="md"
+        footer={
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button variant="ghost" size="sm" onClick={() => setCancelModalOpen(false)}>
+              Keep Subscription
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={isCanceling}
+              onClick={handleCancelSubscription}
+              leftIcon={isCanceling ? Loader2 : XCircle}
+            >
+              {isCanceling ? 'Canceling...' : 'Confirm Cancellation'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3 text-xs sm:text-sm text-[#17211D]">
+          <p>
+            Are you sure you want to cancel your <strong>{subscription?.planName}</strong> subscription?
+          </p>
+          <p className="text-xs text-[#6B756F] leading-relaxed">
+            Your Pro features will remain active until the end of your current billing period ({subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'cycle'}). You will not be charged again.
+          </p>
+        </div>
+      </Modal>
 
       {/* Account Deletion Confirmation Modal */}
       <Modal
@@ -485,7 +814,7 @@ export const SettingsPage = () => {
             <div className="space-y-1">
               <p className="font-bold">This action is irreversible.</p>
               <p className="text-xs leading-relaxed">
-                All your notebooks, documents, vector chunks, chat sessions, research sessions, and personal memories will be permanently removed.
+                All your subscriptions, notebooks, documents, vector chunks, chat sessions, research sessions, and personal memories will be permanently removed.
               </p>
             </div>
           </div>

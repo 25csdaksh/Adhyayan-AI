@@ -31,7 +31,7 @@ This emits a structured JSON archive containing:
 ### 2.2 Irreversible Cascading Account & Data Deletion
 Users have the absolute right to permanently delete their account and all associated data via:
 `DELETE /api/users/me`
-This performs a full cascading purge across all 16 database collections:
+This performs a full cascading purge across all database collections:
 - `User`
 - `Notebook`
 - `Document`
@@ -45,4 +45,6 @@ This performs a full cascading purge across all 16 database collections:
 - `ResearchSession`
 - `ActivityLog`
 - `UsageRecord`
+- `Subscription` & `Payment` records
 - Associated Cloudinary assets
+- Immediate cancellation of active recurring billing subscriptions at the payment gateway.

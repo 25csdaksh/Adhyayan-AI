@@ -67,6 +67,21 @@ const config = {
     maxHistoryMessages: parseInt(process.env.RESEARCH_MAX_HISTORY_MESSAGES || '8', 10),
     maxQueryLength: parseInt(process.env.MAX_RESEARCH_QUERY_LENGTH || '2000', 10),
   },
+  billing: {
+    provider: process.env.PAYMENT_PROVIDER || 'razorpay',
+    currency: process.env.PAYMENT_CURRENCY || 'INR',
+    razorpay: {
+      keyId: process.env.RAZORPAY_KEY_ID || '',
+      keySecret: process.env.RAZORPAY_KEY_SECRET || '',
+      webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '',
+      proPlanId: process.env.RAZORPAY_PRO_PLAN_ID || 'plan_studylm_pro_monthly',
+      enterprisePlanId: process.env.RAZORPAY_ENTERPRISE_PLAN_ID || 'plan_studylm_enterprise_monthly',
+    },
+    prices: {
+      proMonthly: parseInt(process.env.PRO_PLAN_PRICE_INR || '999', 10), // ₹999 / month
+      enterpriseMonthly: parseInt(process.env.ENTERPRISE_PLAN_PRICE_INR || '4999', 10), // ₹4,999 / month
+    },
+  },
 };
 
 // Validate critical configurations

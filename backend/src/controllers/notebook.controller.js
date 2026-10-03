@@ -11,6 +11,9 @@ const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 
+const { checkUsageLimit } = require('../services/usage/entitlementService');
+const { getPlan } = require('../config/plans');
+
 /**
  * Validate MongoDB ObjectId
  * @param {string} id
@@ -38,6 +41,21 @@ const createNotebook = asyncHandler(async (req, res) => {
 
   if (description && description.length > 500) {
     throw ApiError.badRequest('Notebook description cannot exceed 500 characters.');
+  }
+
+  // Server-side quota check
+  const check = await checkUsageLimit(req.user._id, 'notebooks');
+  if (!check.allowed) {
+    const planConfig = getPlan(req.user?.plan);
+    return res.status(429).json({
+      error: 'PLAN_LIMIT_REACHED',
+      message: `You have reached your notebook limit of ${check.limit} on the ${planConfig.name} plan. Upgrade to Pro for increased capacity.`,
+      metric: 'notebooks',
+      currentUsage: check.current,
+      limit: check.limit,
+      plan: req.user?.plan || 'free',
+      upgradeAvailable: true,
+    });
   }
 
   const notebook = await Notebook.create({

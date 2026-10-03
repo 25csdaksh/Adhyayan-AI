@@ -14,6 +14,9 @@ const SourceRelationship = require('../../models/SourceRelationship');
 const ResearchSession = require('../../models/ResearchSession');
 const ActivityLog = require('../../models/ActivityLog');
 const UsageRecord = require('../../models/UsageRecord');
+const Subscription = require('../../models/Subscription');
+const Payment = require('../../models/Payment');
+const { getBillingProvider } = require('../billing/providers/providerFactory');
 
 /**
  * Structured JSON export of all user-owned data
@@ -32,6 +35,8 @@ async function exportUserData(userId) {
     bookmarks,
     researchSessions,
     activity,
+    subscriptions,
+    payments,
   ] = await Promise.all([
     User.findById(userId).select('-passwordHash -__v').lean(),
     Notebook.find({ userId }).select('-__v').lean(),
@@ -42,6 +47,8 @@ async function exportUserData(userId) {
     Bookmark.find({ userId }).select('-__v').lean(),
     ResearchSession.find({ userId }).select('-__v').lean(),
     ActivityLog.find({ userId }).select('-__v').limit(100).lean(),
+    Subscription.find({ userId }).select('-__v -metadata').lean(),
+    Payment.find({ userId }).select('-__v -metadata').lean(),
   ]);
 
   return {
@@ -54,6 +61,22 @@ async function exportUserData(userId) {
       plan: user?.plan,
       createdAt: user?.createdAt,
     },
+    subscription: subscriptions.map((s) => ({
+      plan: s.plan,
+      status: s.status,
+      billingCycle: s.billingCycle,
+      amount: s.amount,
+      currency: s.currency,
+      currentPeriodStart: s.currentPeriodStart,
+      currentPeriodEnd: s.currentPeriodEnd,
+      cancelAtPeriodEnd: s.cancelAtPeriodEnd,
+    })),
+    paymentHistory: payments.map((p) => ({
+      amount: p.amount,
+      currency: p.currency,
+      status: p.status,
+      paidAt: p.paidAt || p.createdAt,
+    })),
     notebooks: notebooks.map((nb) => ({
       id: nb._id,
       title: nb.title,
@@ -127,6 +150,19 @@ async function exportUserData(userId) {
  * @returns {Promise<{ deleted: boolean, summary: Object }>}
  */
 async function deleteUserAccount(userId) {
+  // Cancel active subscriptions on provider
+  try {
+    const activeSubs = await Subscription.find({ userId, status: 'active' });
+    const provider = getBillingProvider();
+    for (const sub of activeSubs) {
+      if (sub.providerSubscriptionId) {
+        await provider.cancelSubscription(sub.providerSubscriptionId, false).catch(() => {});
+      }
+    }
+  } catch (err) {
+    console.warn('[Account Deletion Warning] Failed to cancel provider subscription:', err.message);
+  }
+
   // Find all user documents to get chunk IDs
   const userDocs = await Document.find({ userId }).select('_id').lean();
   const userDocIds = userDocs.map((d) => d._id);
@@ -135,7 +171,7 @@ async function deleteUserAccount(userId) {
   const userNotebooks = await Notebook.find({ userId }).select('_id').lean();
   const userNbIds = userNotebooks.map((nb) => nb._id);
 
-  // Execute parallel cascading deletion
+  // Execute parallel cascading deletion across all collections
   const [
     delChunks,
     delDocs,
@@ -151,6 +187,8 @@ async function deleteUserAccount(userId) {
     delResearch,
     delActivity,
     delUsage,
+    delSubs,
+    delPays,
     delNotebooks,
     delUser,
   ] = await Promise.all([
@@ -168,6 +206,8 @@ async function deleteUserAccount(userId) {
     ResearchSession.deleteMany({ userId }),
     ActivityLog.deleteMany({ userId }),
     UsageRecord.deleteMany({ userId }),
+    Subscription.deleteMany({ userId }),
+    Payment.deleteMany({ userId }),
     Notebook.deleteMany({ userId }),
     User.findByIdAndDelete(userId),
   ]);
@@ -181,6 +221,8 @@ async function deleteUserAccount(userId) {
       notebooksDeleted: delNotebooks.deletedCount,
       chatsDeleted: delChats.deletedCount,
       researchSessionsDeleted: delResearch.deletedCount,
+      subscriptionsDeleted: delSubs.deletedCount,
+      paymentsDeleted: delPays.deletedCount,
     },
   };
 }
