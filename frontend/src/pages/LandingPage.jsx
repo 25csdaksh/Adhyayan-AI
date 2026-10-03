@@ -25,6 +25,7 @@ import {
   ChevronRight,
   TrendingUp,
   Award,
+  Play,
   GraduationCap,
   Users,
   Clock,
@@ -36,6 +37,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
 import { BrandLogo } from '../components/common/BrandLogo';
+import { CinematicVideoIntro } from '../components/common/CinematicVideoIntro';
 import { LandingFooter } from '../components/layout/LandingFooter';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -43,6 +45,9 @@ import { useToast } from '../context/ToastContext';
 export const LandingPage = () => {
   const { isAuthenticated, user } = useAuth();
   const toast = useToast();
+
+  // 5-second cinematic brand intro on site load
+  const [showIntro, setShowIntro] = useState(true);
 
   const [activeSimulatorTab, setActiveSimulatorTab] = useState('chat');
   const [flashcardFlipped, setFlashcardFlipped] = useState(false);
@@ -181,6 +186,11 @@ export const LandingPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-slate-900 selection:bg-emerald-700 selection:text-white relative">
+      {/* 5-Second Cinematic Brand Intro Animation on site load */}
+      {showIntro && (
+        <CinematicVideoIntro onComplete={() => setShowIntro(false)} />
+      )}
+
       {/* Sticky Modern Navbar */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -202,6 +212,15 @@ export const LandingPage = () => {
 
             {/* Action CTAs */}
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowIntro(true)}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:border-emerald-600 text-xs font-semibold text-slate-600 hover:text-emerald-800 bg-slate-50 hover:bg-white transition-all cursor-pointer shadow-2xs"
+                title="Play 5s Cinematic Brand Intro"
+              >
+                <Play className="w-3 h-3 text-emerald-600 fill-emerald-600" />
+                <span>Play Intro (5s)</span>
+              </button>
 
               {isAuthenticated ? (
                 <Link to="/dashboard" className="flex items-center gap-2">
