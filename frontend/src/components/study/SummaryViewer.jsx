@@ -19,6 +19,7 @@ import {
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { CitationCard } from '../chat/CitationCard';
+import { renderRichFormattedText, renderBlockMarkdown } from '../../utils/formatCitationMarkdown';
 
 export const SummaryViewer = ({ studyTool, onSelectCitation }) => {
   const [copied, setCopied] = useState(false);
@@ -127,29 +128,13 @@ export const SummaryViewer = ({ studyTool, onSelectCitation }) => {
     document.body.removeChild(link);
   };
 
-  // Render text with clickable citation badges [1], [2], etc.
+  // Helper function to render text with rich markdown and clickable citation badges
   const renderTextWithCitations = (text) => {
-    if (!text || typeof text !== 'string') return text;
-    const parts = text.split(/(\[\d+\]|\[SOURCE_\d+\])/g);
-    return parts.map((part, idx) => {
-      const match = part.match(/^\[(?:SOURCE_)?(\d+)\]$/i);
-      if (match) {
-        const citationNum = parseInt(match[1], 10);
-        const citObj = citations.find((c) => c.citationNumber === citationNum);
-        return (
-          <button
-            key={idx}
-            type="button"
-            onClick={() => citObj && onSelectCitation && onSelectCitation(citObj)}
-            className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded text-[11px] font-bold bg-[#E8EFEA] text-[#1F5E4B] border border-[#C2D8CD] hover:bg-[#1F5E4B] hover:text-white cursor-pointer transition-all shadow-2xs"
-            title={citObj ? `${citObj.documentTitle || 'Source'} (p.${citObj.pageNumber || 1})` : `Citation [${citationNum}]`}
-          >
-            {citationNum}
-          </button>
-        );
-      }
-      return <span key={idx}>{part}</span>;
-    });
+    return renderRichFormattedText(text, citations, onSelectCitation);
+  };
+
+  const renderBlockWithCitations = (content) => {
+    return renderBlockMarkdown(content, citations, onSelectCitation);
   };
 
   const tabs = [
