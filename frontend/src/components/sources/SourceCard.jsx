@@ -12,6 +12,7 @@ import {
   AlertCircle,
   CheckCircle2,
   RefreshCw,
+  BookOpen,
 } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { Dropdown, DropdownItem, DropdownDivider } from '../ui/Dropdown';
