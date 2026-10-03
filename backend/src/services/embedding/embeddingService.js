@@ -80,20 +80,50 @@ function generateDeterministicPseudoEmbedding(text, dimensions = EXPECTED_DIMENS
  * @param {number[]} vector
  * @param {number} [expectedDim=EXPECTED_DIMENSIONS]
  */
-function validateEmbeddingVector(vector, expectedDim = EXPECTED_DIMENSIONS) {
-  if (!Array.isArray(vector)) {
-    throw new Error('Generated embedding must be an array');
+/**
+ * Validate and normalize embedding vector to exact target dimensions (L2 normalized)
+ * @param {number[]} vector
+ * @param {number} [expectedDim=EXPECTED_DIMENSIONS]
+ * @returns {number[]}
+ */
+function validateAndNormalizeEmbeddingVector(vector, expectedDim = EXPECTED_DIMENSIONS) {
+  if (!Array.isArray(vector) || vector.length === 0) {
+    throw new Error('Generated embedding must be a non-empty array');
   }
-  if (vector.length !== expectedDim) {
+
+  let finalVector = vector;
+  if (vector.length > expectedDim) {
+    // Truncate to expected dimensions and re-normalize
+    finalVector = vector.slice(0, expectedDim);
+    let norm = 0;
+    for (let i = 0; i < finalVector.length; i++) {
+      norm += finalVector[i] * finalVector[i];
+    }
+    norm = Math.sqrt(norm);
+    if (norm > 0) {
+      finalVector = finalVector.map((v) => parseFloat((v / norm).toFixed(6)));
+    }
+  } else if (vector.length < expectedDim) {
     throw new Error(
       `Embedding vector dimension mismatch: expected ${expectedDim}, received ${vector.length}`
     );
   }
-  for (let i = 0; i < vector.length; i++) {
-    if (typeof vector[i] !== 'number' || isNaN(vector[i])) {
+
+  for (let i = 0; i < finalVector.length; i++) {
+    if (typeof finalVector[i] !== 'number' || isNaN(finalVector[i])) {
       throw new Error(`Embedding vector contains invalid numeric value at index ${i}`);
     }
   }
+  return finalVector;
+}
+
+/**
+ * Validate embedding vector integrity and dimensions
+ * @param {number[]} vector
+ * @param {number} [expectedDim=EXPECTED_DIMENSIONS]
+ */
+function validateEmbeddingVector(vector, expectedDim = EXPECTED_DIMENSIONS) {
+  return validateAndNormalizeEmbeddingVector(vector, expectedDim);
 }
 
 /**
@@ -101,6 +131,10 @@ function validateEmbeddingVector(vector, expectedDim = EXPECTED_DIMENSIONS) {
  * @param {number} ms
  */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const CANDIDATE_EMBEDDING_MODELS = Array.from(
+  new Set([config.gemini.embeddingModel || 'gemini-embedding-001', 'gemini-embedding-001', 'text-embedding-004'])
+).filter(Boolean);
 
 /**
  * Generate embedding for a single text string
@@ -127,39 +161,47 @@ async function generateEmbedding(text) {
   }
 
   const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-  const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
+  let lastError = null;
 
-  // Retry with exponential backoff for transient failures (429/503)
-  const maxRetries = 3;
-  let lastError;
+  for (const modelName of CANDIDATE_EMBEDDING_MODELS) {
+    const model = genAI.getGenerativeModel({ model: modelName });
+    const maxRetries = 2;
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const result = await model.embedContent({
-        content: { parts: [{ text: cleanText }] },
-        outputDimensionality: EXPECTED_DIMENSIONS,
-      });
-      const vector = result?.embedding?.values;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await model.embedContent({
+          content: { parts: [{ text: cleanText }] },
+          outputDimensionality: EXPECTED_DIMENSIONS,
+        });
+        const rawVector = result?.embedding?.values;
 
-      if (!vector) {
-        throw new Error('Gemini API returned an empty embedding vector');
+        if (!rawVector) {
+          throw new Error('Gemini API returned an empty embedding vector');
+        }
+
+        const normalized = validateAndNormalizeEmbeddingVector(rawVector, EXPECTED_DIMENSIONS);
+        return normalized;
+      } catch (err) {
+        lastError = err;
+        const errMsg = err.message || '';
+        const isNotFound = errMsg.includes('404') || errMsg.includes('not found') || errMsg.includes('not supported');
+        if (isNotFound) {
+          // Break inner loop to try next candidate model
+          break;
+        }
+
+        const isTransient =
+          errMsg.includes('429') ||
+          errMsg.includes('503') ||
+          errMsg.includes('RESOURCE_EXHAUSTED') ||
+          errMsg.includes('fetch failed');
+
+        if (isTransient && attempt < maxRetries) {
+          await sleep(Math.pow(2, attempt) * 500);
+          continue;
+        }
+        break;
       }
-
-      validateEmbeddingVector(vector, EXPECTED_DIMENSIONS);
-      return vector;
-    } catch (err) {
-      lastError = err;
-      const isTransient =
-        err.message?.includes('429') ||
-        err.message?.includes('503') ||
-        err.message?.includes('RESOURCE_EXHAUSTED') ||
-        err.message?.includes('fetch failed');
-
-      if (isTransient && attempt < maxRetries) {
-        await sleep(Math.pow(2, attempt) * 500);
-        continue;
-      }
-      break;
     }
   }
 
@@ -194,45 +236,17 @@ async function generateEmbeddings(texts, batchSize = 16) {
     );
   }
 
-  const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-  const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
-
-  // Process in batches
+  // Process items in chunks
   for (let i = 0; i < texts.length; i += batchSize) {
     const batch = texts.slice(i, i + batchSize);
 
-    // Try batchEmbedContents API first
-    let batchVectors = null;
-    try {
-      const requests = batch.map((t) => ({
-        content: { parts: [{ text: t }] },
-        outputDimensionality: EXPECTED_DIMENSIONS,
-      }));
-
-      const batchResult = await model.batchEmbedContents({ requests });
-      if (batchResult?.embeddings && Array.isArray(batchResult.embeddings)) {
-        batchVectors = batchResult.embeddings.map((e) => e.values);
-      }
-    } catch {
-      batchVectors = null;
+    for (const text of batch) {
+      const v = await generateEmbedding(text);
+      results.push(v);
     }
 
-    if (batchVectors && batchVectors.length === batch.length) {
-      for (const v of batchVectors) {
-        validateEmbeddingVector(v, EXPECTED_DIMENSIONS);
-        results.push(v);
-      }
-    } else {
-      // Fallback to sequential single embedding generation for this batch
-      for (const text of batch) {
-        const v = await generateEmbedding(text);
-        results.push(v);
-      }
-    }
-
-    // Small delay between batches to respect rate limits
     if (i + batchSize < texts.length) {
-      await sleep(150);
+      await sleep(100);
     }
   }
 
@@ -243,9 +257,10 @@ module.exports = {
   generateEmbedding,
   generateEmbeddings,
   validateEmbeddingVector,
+  validateAndNormalizeEmbeddingVector,
   generateDeterministicPseudoEmbedding,
   isLiveGeminiConfigured,
   isPseudoFallbackEnabled,
-  EMBEDDING_MODEL,
+  EMBEDDING_MODEL: CANDIDATE_EMBEDDING_MODELS[0],
   EXPECTED_DIMENSIONS,
 };

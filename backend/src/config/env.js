@@ -20,7 +20,7 @@ const config = {
   maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || '20', 10),
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || '',
-    embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
+    embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-001',
     chatModel: process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash',
     fallbackChatModel: process.env.GEMINI_CHAT_FALLBACK_MODEL || '',
     dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '768', 10),
