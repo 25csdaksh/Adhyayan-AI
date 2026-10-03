@@ -4,7 +4,7 @@
 
 ---
 
-## 📌 Status: Phase 12 Completed (Production Hardening + Reliability + Observability)
+## 📌 Status: Phase 13 Completed (Personal Research Memory + Advanced Knowledge UX)
 
 - **Phase 01:** Foundation, Monorepo, Express Backend, MongoDB, CORS, `/api/health` *(Verified)*
 - **Phase 02:** Light-First Academic UI/UX, Design System, Landing Page, Dashboard, 3-Panel Workspace, Chat UI, Source Management, Settings, Profile *(Verified)*
@@ -18,6 +18,8 @@
 - **Phase 10:** Core NotebookLM Intelligence (Source Analysis, Deep Coverage, Deterministic Synthesis) *(Verified)*
 - **Phase 11:** Web Sources + Advanced Research Engine (SSRF Protection, Multi-Source Vector Scoping, Grounded Research) *(Verified)*
 - **Phase 12:** Production Hardening + Reliability + Observability (Rate Limiting, AI Quota Guard, NoSQL Sanitization, Graceful Shutdown, Stale Job Recovery, Health Probes) *(Verified)*
+- **Phase 13:** Personal Research Memory + Advanced Knowledge UX (User & Notebook Memory, Source Relationships, Deep-Link Citation Previews, Saved Insights, Bookmarks, Universal Search, Knowledge Overview, Activity Timeline, Personalized Study Recommendations) *(Verified)*
+
 
 
 ---

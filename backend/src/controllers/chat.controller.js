@@ -199,6 +199,7 @@ const sendMessage = asyncHandler(async (req, res) => {
   try {
     ragResult = await generateGroundedResponse({
       notebookId: notebook._id,
+      userId: req.user._id,
       question: cleanMessage,
       history: conversationHistory,
       topK,
@@ -207,6 +208,7 @@ const sendMessage = asyncHandler(async (req, res) => {
   } catch (ragErr) {
     throw new ApiError(500, ragErr.message || 'Failed to generate grounded AI answer');
   }
+
 
   // 4. Persist assistant message with citations
   const assistantMessage = await ChatMessage.create({

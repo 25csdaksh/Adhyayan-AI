@@ -8,6 +8,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   BookOpen,
+  Bookmark,
+  PlusCircle,
 } from 'lucide-react';
 import { CitationCard } from './CitationCard';
 import { useToast } from '../../context/ToastContext';
@@ -17,6 +19,8 @@ export const ChatMessage = ({
   message,
   onRegenerate,
   onCitationClick,
+  onSaveInsight,
+  onBookmark,
 }) => {
   const isAI = message.role === 'assistant' || message.sender === 'ai';
   const [copied, setCopied] = useState(false);
@@ -202,6 +206,30 @@ export const ChatMessage = ({
                 <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
               </button>
 
+              {onSaveInsight && (
+                <button
+                  type="button"
+                  onClick={() => onSaveInsight(message)}
+                  className="p-1.5 rounded-lg hover:text-[#1F5E4B] hover:bg-[#E8F2EE] transition-colors cursor-pointer flex items-center gap-1 text-xs"
+                  title="Save as Research Insight"
+                >
+                  <Bookmark className="w-3.5 h-3.5 text-[#1F5E4B]" />
+                  <span className="hidden sm:inline">Save Insight</span>
+                </button>
+              )}
+
+              {onBookmark && (
+                <button
+                  type="button"
+                  onClick={() => onBookmark(message)}
+                  className="p-1.5 rounded-lg hover:text-[#17211D] hover:bg-[#F2F5F3] transition-colors cursor-pointer flex items-center gap-1 text-xs"
+                  title="Bookmark Message"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Bookmark</span>
+                </button>
+              )}
+
               {onRegenerate && (
                 <button
                   type="button"
@@ -243,3 +271,4 @@ export const ChatMessage = ({
     </div>
   );
 };
+

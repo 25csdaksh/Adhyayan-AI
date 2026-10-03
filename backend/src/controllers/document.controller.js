@@ -5,7 +5,9 @@ const Notebook = require('../models/Notebook');
 const Chunk = require('../models/Chunk');
 const { uploadStream, deleteAsset } = require('../config/cloudinary');
 const { processDocument, triggerAsyncProcessing } = require('../services/document/documentProcessor');
+const { logActivity } = require('../services/activity/activityService');
 const asyncHandler = require('../utils/asyncHandler');
+
 const ApiResponse = require('../utils/apiResponse');
 const ApiError = require('../utils/apiError');
 
@@ -95,6 +97,14 @@ const createDocument = asyncHandler(async (req, res) => {
       // Trigger asynchronous processing pipeline
       triggerAsyncProcessing(document._id, { directBuffer: req.file.buffer });
 
+      logActivity({
+        notebookId: notebook._id,
+        userId: req.user._id,
+        action: 'source_added',
+        title: 'Uploaded File Source',
+        details: document.title,
+      });
+
       return ApiResponse.success(res, { document }, 'Document uploaded successfully', 201);
     } catch (dbErr) {
       if (uploadResult?.public_id) {
@@ -132,6 +142,14 @@ const createDocument = asyncHandler(async (req, res) => {
     // Trigger asynchronous processing pipeline
     triggerAsyncProcessing(document._id);
 
+    logActivity({
+      notebookId: notebook._id,
+      userId: req.user._id,
+      action: 'source_added',
+      title: 'Added Text Note Source',
+      details: document.title,
+    });
+
     return ApiResponse.success(res, { document }, 'Text source created successfully', 201);
   }
 
@@ -167,8 +185,17 @@ const createDocument = asyncHandler(async (req, res) => {
     // Trigger asynchronous processing pipeline
     triggerAsyncProcessing(document._id);
 
+    logActivity({
+      notebookId: notebook._id,
+      userId: req.user._id,
+      action: 'source_added',
+      title: 'Added Web URL Source',
+      details: document.title,
+    });
+
     return ApiResponse.success(res, { document }, 'URL source created successfully', 201);
   }
+
 
   throw new ApiError(400, 'Please provide a file, text content, or URL to add as a source');
 });

@@ -6,6 +6,9 @@ const { buildContext } = require('./contextBuilder');
 const { buildPrompt, SYSTEM_INSTRUCTION } = require('./promptBuilder');
 const { processCitations } = require('./citationService');
 const { analyzeQuery, extractQueryConcepts } = require('./queryAnalyzer');
+const { getRelevantUserMemoriesForQuery } = require('../memory/userMemoryService');
+const { getNotebookMemory } = require('../memory/notebookMemoryService');
+const { logActivity } = require('../activity/activityService');
 
 const INSUFFICIENT_INFO_RESPONSE =
   "I couldn't find enough information about this in your notebook sources. Try asking about a topic covered in your uploaded materials.";
@@ -104,6 +107,7 @@ function generateDeterministicDevAnswer(question, formattedSources = [], queryAn
  *
  * @param {Object} params
  * @param {string|import('mongoose').Types.ObjectId} params.notebookId
+ * @param {string|import('mongoose').Types.ObjectId} [params.userId]
  * @param {string} params.question
  * @param {Array<{ role: string, content: string }>} [params.history=[]]
  * @param {number} [params.topK]
@@ -113,6 +117,7 @@ function generateDeterministicDevAnswer(question, formattedSources = [], queryAn
  */
 async function generateGroundedResponse({
   notebookId,
+  userId,
   question,
   history = [],
   topK = config.rag?.defaultTopK || 5,
@@ -134,6 +139,17 @@ async function generateGroundedResponse({
     Math.max(1, parseInt(topK, 10) || 5)
   );
   const boundedThreshold = Math.max(0, Math.min(1, parseFloat(scoreThreshold) || 0));
+
+  // Log activity non-blockingly
+  if (userId) {
+    logActivity({
+      notebookId,
+      userId,
+      action: 'question_asked',
+      title: 'Asked Question',
+      details: cleanQuestion.slice(0, 100),
+    });
+  }
 
   // 1. Analyze query intent, concepts, page references, and follow-up references
   const queryAnalysis = analyzeQuery(cleanQuestion, history);
@@ -173,12 +189,29 @@ async function generateGroundedResponse({
   // 4. Grounded Context Construction with deduplication
   const { contextText, sourceMap, formattedSources } = buildContext(retrievedChunks);
 
-  // 5. Prompt Construction
+  // 5. Fetch relevant user and notebook memory if userId available
+  let userMemories = [];
+  let notebookMemory = null;
+  if (userId) {
+    try {
+      [userMemories, notebookMemory] = await Promise.all([
+        getRelevantUserMemoriesForQuery({ userId, queryText: cleanQuestion }),
+        getNotebookMemory({ notebookId, userId }).catch(() => null),
+      ]);
+    } catch {
+      // Graceful fallback if memory lookup encounters errors
+    }
+  }
+
+  // 6. Prompt Construction with memory context
   const prompt = buildPrompt({
     question: cleanQuestion,
     contextText,
     history,
+    userMemories,
+    notebookMemory,
   });
+
 
   const chatModelName = config.gemini?.chatModel || 'gemini-2.5-flash';
   let rawAnswer = '';

@@ -27,6 +27,12 @@ import {
   Quote,
   Loader2,
   ExternalLink,
+  Search,
+  Brain,
+  Bookmark,
+  GitCompare,
+  Clock,
+  Compass,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -48,8 +54,19 @@ import { useToast } from '../context/ToastContext';
 import { EmptyState } from '../components/ui/EmptyState';
 import { DeleteSourceModal } from '../components/sources/DeleteSourceModal';
 import { Skeleton } from '../components/ui/Skeleton';
-import { Globe, Compass } from 'lucide-react';
+import { Globe } from 'lucide-react';
 import { SourceSummaryModal } from '../components/sources/SourceSummaryModal';
+
+// Phase 13 Components
+import { SourcePreviewModal } from '../components/sources/SourcePreviewModal';
+import { SavedInsightsPanel } from '../components/insights/SavedInsightsPanel';
+import { SourceRelationshipsPanel } from '../components/relationships/SourceRelationshipsPanel';
+import { KnowledgeOverviewPanel } from '../components/overview/KnowledgeOverviewPanel';
+import { ActivityTimelinePanel } from '../components/activity/ActivityTimelinePanel';
+import { UniversalSearchModal } from '../components/search/UniversalSearchModal';
+import { MemoryManagementModal } from '../components/memory/MemoryManagementModal';
+import { insightService } from '../api/insightService';
+
 
 export const NotebookWorkspacePage = () => {
   const { id } = useParams();
@@ -64,7 +81,7 @@ export const NotebookWorkspacePage = () => {
   const [sources, setSources] = useState([]);
   const [webSources, setWebSources] = useState([]);
   const [activeSourceTab, setActiveSourceTab] = useState('all'); // 'all' | 'documents' | 'web'
-  const [activeStudioTab, setActiveStudioTab] = useState('study'); // 'study' | 'research'
+  const [activeStudioTab, setActiveStudioTab] = useState('study'); // 'study' | 'research' | 'overview' | 'insights' | 'relationships' | 'activity'
 
   // Chat State
   const [chatSessions, setChatSessions] = useState([]);
@@ -81,6 +98,10 @@ export const NotebookWorkspacePage = () => {
   const [refreshingWebSourceId, setRefreshingWebSourceId] = useState(null);
   const [selectedSourceSnippet, setSelectedSourceSnippet] = useState(null);
   const [summaryModalDoc, setSummaryModalDoc] = useState(null);
+
+  // Phase 13 Modals
+  const [universalSearchOpen, setUniversalSearchOpen] = useState(false);
+  const [memoryModalOpen, setMemoryModalOpen] = useState(false);
 
   // Responsive workspace tab state for tablet & mobile
   const [mobileActivePanel, setMobileActivePanel] = useState('chat'); // 'sources' | 'chat' | 'tools'
@@ -333,6 +354,36 @@ export const NotebookWorkspacePage = () => {
     }
   };
 
+  // Quick save insight from chat message
+  const handleSaveInsightFromMessage = async (msg) => {
+    try {
+      const title = (msg.content || '').slice(0, 48).trim() + '...';
+      await insightService.createSavedInsight(id, {
+        title: title || 'Saved Insight',
+        content: msg.content,
+        sourceReferences: msg.citations || [],
+        tags: ['chat-insight'],
+      });
+      toast.success('Response saved to Notebook Insights!', 'Insight Saved');
+    } catch (err) {
+      toast.error('Failed to save insight', 'Error');
+    }
+  };
+
+  // Quick bookmark chat message
+  const handleBookmarkMessage = async (msg) => {
+    try {
+      await insightService.createBookmark(id, {
+        targetType: 'chat',
+        targetId: msg._id,
+        title: (msg.content || '').slice(0, 50),
+      });
+      toast.success('Message bookmarked!', 'Bookmarked');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to bookmark message', 'Error');
+    }
+  };
+
   // Send message and get grounded RAG answer
   const handleSendMessage = async (userQuery) => {
     if (!userQuery || !userQuery.trim() || isSending) return;
@@ -440,7 +491,7 @@ export const NotebookWorkspacePage = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] -m-4 sm:-m-6 lg:-m-8 bg-[#F7F8F6] overflow-hidden">
       {/* Workspace Sub-Header */}
-      <div className="bg-white border-b border-[#E2E7E3] px-4 sm:px-6 py-3 flex items-center justify-between gap-4 shrink-0">
+      <div className="bg-white border-b border-[#E2E7E3] px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             to="/dashboard"
@@ -460,29 +511,53 @@ export const NotebookWorkspacePage = () => {
               </Badge>
             </div>
             <p className="text-[11px] text-[#6B756F] truncate hidden sm:block">
-              {notebook.description || 'No description provided'}
+              {notebook.description || 'Personalized study and research workspace'}
             </p>
           </div>
         </div>
 
-        {/* Panel collapse controls for Desktop */}
-        <div className="hidden xl:flex items-center gap-1 text-[#8E9993]">
+        {/* Phase 13 Universal Search & Research Memory Quick Actions */}
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
-            className="p-1.5 hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors cursor-pointer"
-            title={leftPanelCollapsed ? 'Show Sources' : 'Collapse Sources'}
+            onClick={() => setUniversalSearchOpen(true)}
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E2E7E3] hover:border-[#1F5E4B] text-xs font-semibold text-[#6B756F] hover:text-[#17211D] bg-[#F7F8F6] hover:bg-white transition-all cursor-pointer shadow-2xs"
+            title="Universal Notebook Search"
           >
-            {leftPanelCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4 text-[#1F5E4B]" />}
+            <Search className="w-3.5 h-3.5 text-[#1F5E4B]" />
+            <span>Search Notebook</span>
+            <kbd className="text-[10px] px-1.5 py-0.5 bg-white border border-[#E2E7E3] rounded text-[#8E9993]">⌘K</kbd>
           </button>
+
           <button
             type="button"
-            onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)}
-            className="p-1.5 hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors cursor-pointer"
-            title={rightPanelCollapsed ? 'Show Study Studio' : 'Collapse Study Studio'}
+            onClick={() => setMemoryModalOpen(true)}
+            className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl border border-[#E2E7E3] hover:border-[#1F5E4B] text-xs font-semibold text-[#1F5E4B] bg-[#E8F2EE] hover:bg-[#D8E9E2] transition-colors cursor-pointer flex items-center gap-1.5"
+            title="Research Memory & Directives"
           >
-            {rightPanelCollapsed ? <PanelRight className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4 text-[#1F5E4B]" />}
+            <Brain className="w-4 h-4 text-[#1F5E4B]" />
+            <span className="hidden sm:inline">Memory</span>
           </button>
+
+          {/* Panel collapse controls for Desktop */}
+          <div className="hidden xl:flex items-center gap-1 text-[#8E9993] border-l border-[#E2E7E3] pl-2">
+            <button
+              type="button"
+              onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
+              className="p-1.5 hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors cursor-pointer"
+              title={leftPanelCollapsed ? 'Show Sources' : 'Collapse Sources'}
+            >
+              {leftPanelCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4 text-[#1F5E4B]" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)}
+              className="p-1.5 hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors cursor-pointer"
+              title={rightPanelCollapsed ? 'Show Knowledge Studio' : 'Collapse Knowledge Studio'}
+            >
+              {rightPanelCollapsed ? <PanelRight className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4 text-[#1F5E4B]" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile & Tablet Panel Switcher Bar */}
@@ -764,6 +839,8 @@ export const NotebookWorkspacePage = () => {
                   key={msg._id || msg.id}
                   message={msg}
                   onCitationClick={(cit) => setCitationPreview(cit)}
+                  onSaveInsight={handleSaveInsightFromMessage}
+                  onBookmark={handleBookmarkMessage}
                   onRegenerate={() => {
                     const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
                     if (lastUserMsg) {
@@ -782,7 +859,7 @@ export const NotebookWorkspacePage = () => {
                   Ask anything about your sources
                 </h3>
                 <p className="text-xs sm:text-sm text-[#6B756F] leading-relaxed">
-                  Upload materials and start exploring your knowledge. Every answer is grounded directly in your notebook documents and web sources with verifiable citations.
+                  Upload materials and start exploring your knowledge. Every answer is grounded directly in your notebook documents and web sources with verifiable citations and personalized study directives.
                 </p>
               </div>
             )}
@@ -797,7 +874,7 @@ export const NotebookWorkspacePage = () => {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-[#17211D]">StudyLM AI</span>
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#E8F2EE] text-[#1F5E4B] flex items-center gap-1">
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" /> Grounding in notebook sources...
+                      <Loader2 className="w-2.5 h-2.5 animate-spin" /> Grounding in sources & memory...
                     </span>
                   </div>
                   <div className="h-3.5 bg-[#F2F5F3] rounded w-5/6" />
@@ -820,52 +897,139 @@ export const NotebookWorkspacePage = () => {
           </div>
         </div>
 
-        {/* PANEL 3: RIGHT STUDY STUDIO TOOLS / RESEARCH PANEL */}
+        {/* PANEL 3: RIGHT KNOWLEDGE STUDIO / TOOLS PANEL */}
         <div
           className={`bg-white border-l border-[#E2E7E3] flex flex-col transition-all duration-200 shrink-0
             ${rightPanelCollapsed ? 'w-0 hidden' : 'w-80 sm:w-88 lg:w-96'}
             ${mobileActivePanel === 'tools' ? 'flex w-full absolute inset-0 z-20 pt-16 bg-white' : 'hidden lg:flex'}`}
         >
-          {/* Studio Tab Switcher */}
-          <div className="p-3 border-b border-[#EDF1EE] flex items-center gap-1.5 bg-[#FAFBF9] shrink-0">
-            <button
-              type="button"
-              onClick={() => setActiveStudioTab('study')}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                activeStudioTab === 'study'
-                  ? 'bg-white text-[#1F5E4B] shadow-2xs border border-[#E2E7E3]'
-                  : 'text-[#6B756F] hover:text-[#17211D]'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Study Tools</span>
-            </button>
+          {/* Studio Tab Switcher - Phase 13 Multi-section Navigation */}
+          <div className="p-2 border-b border-[#EDF1EE] bg-[#FAFBF9] shrink-0 overflow-x-auto">
+            <div className="flex items-center gap-1 min-w-max">
+              <button
+                type="button"
+                onClick={() => setActiveStudioTab('overview')}
+                className={`py-1.5 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeStudioTab === 'overview'
+                    ? 'bg-white text-[#1F5E4B] shadow-2xs border border-[#E2E7E3]'
+                    : 'text-[#6B756F] hover:text-[#17211D]'
+                }`}
+                title="Knowledge Overview & Recommendations"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-[#1F5E4B]" />
+                <span>Overview</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveStudioTab('research')}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                activeStudioTab === 'research'
-                  ? 'bg-white text-blue-700 shadow-2xs border border-[#E2E7E3]'
-                  : 'text-[#6B756F] hover:text-[#17211D]'
-              }`}
-            >
-              <Compass className="w-3.5 h-3.5 text-blue-600" />
-              <span>Deep Research</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setActiveStudioTab('study')}
+                className={`py-1.5 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeStudioTab === 'study'
+                    ? 'bg-white text-[#1F5E4B] shadow-2xs border border-[#E2E7E3]'
+                    : 'text-[#6B756F] hover:text-[#17211D]'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#1F5E4B]" />
+                <span>Study</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveStudioTab('research')}
+                className={`py-1.5 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeStudioTab === 'research'
+                    ? 'bg-white text-blue-700 shadow-2xs border border-[#E2E7E3]'
+                    : 'text-[#6B756F] hover:text-[#17211D]'
+                }`}
+              >
+                <Compass className="w-3.5 h-3.5 text-blue-600" />
+                <span>Research</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveStudioTab('insights')}
+                className={`py-1.5 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeStudioTab === 'insights'
+                    ? 'bg-white text-emerald-700 shadow-2xs border border-[#E2E7E3]'
+                    : 'text-[#6B756F] hover:text-[#17211D]'
+                }`}
+                title="Saved Insights"
+              >
+                <Bookmark className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Insights</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveStudioTab('relationships')}
+                className={`py-1.5 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeStudioTab === 'relationships'
+                    ? 'bg-white text-indigo-700 shadow-2xs border border-[#E2E7E3]'
+                    : 'text-[#6B756F] hover:text-[#17211D]'
+                }`}
+                title="Source Relationships"
+              >
+                <GitCompare className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Relations</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveStudioTab('activity')}
+                className={`py-1.5 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeStudioTab === 'activity'
+                    ? 'bg-white text-amber-700 shadow-2xs border border-[#E2E7E3]'
+                    : 'text-[#6B756F] hover:text-[#17211D]'
+                }`}
+                title="Activity Timeline"
+              >
+                <Clock className="w-3.5 h-3.5 text-amber-600" />
+                <span>Timeline</span>
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
-            {activeStudioTab === 'study' ? (
+            {activeStudioTab === 'overview' && (
+              <KnowledgeOverviewPanel
+                notebookId={id}
+                onNavigateTab={(tab) => setActiveStudioTab(tab)}
+              />
+            )}
+
+            {activeStudioTab === 'study' && (
               <StudyToolsPanel
                 notebookId={id}
                 notebookTitle={notebook?.title}
                 onSelectCitation={(cit) => setCitationPreview(cit)}
               />
-            ) : (
+            )}
+
+            {activeStudioTab === 'research' && (
               <ResearchPanel
                 notebookId={id}
                 onSelectCitation={(cit) => setCitationPreview(cit)}
+              />
+            )}
+
+            {activeStudioTab === 'insights' && (
+              <SavedInsightsPanel
+                notebookId={id}
+                onCitationClick={(cit) => setCitationPreview(cit)}
+              />
+            )}
+
+            {activeStudioTab === 'relationships' && (
+              <SourceRelationshipsPanel
+                notebookId={id}
+                onSelectSource={(s) => setSummaryModalDoc(s)}
+              />
+            )}
+
+            {activeStudioTab === 'activity' && (
+              <ActivityTimelinePanel
+                notebookId={id}
               />
             )}
           </div>
@@ -897,64 +1061,38 @@ export const NotebookWorkspacePage = () => {
         isDeleting={isDeletingSource}
       />
 
-      {/* Citation Preview Modal */}
-      <Modal
+      {/* Phase 13 Source Preview Modal (Citation Deep Linking & Chunk Surrounds) */}
+      <SourcePreviewModal
         isOpen={Boolean(citationPreview)}
         onClose={() => setCitationPreview(null)}
-        title={citationPreview?.documentTitle || citationPreview?.domain || 'Grounded Citation'}
-        description={`Source reference [${citationPreview?.citationNumber || 1}] • ${
-          citationPreview?.sourceKind === 'web' || citationPreview?.url
-            ? `Web Source (${citationPreview?.domain || 'Verified Web'})`
-            : citationPreview?.pageNumber
-            ? `Page ${citationPreview.pageNumber}`
-            : citationPreview?.sourceType?.toUpperCase() || 'Notebook Source'
-        }`}
-        footer={
-          <div className="flex items-center justify-between w-full gap-2">
-            {citationPreview?.url && (
-              <a
-                href={citationPreview.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-blue-600 hover:underline flex items-center gap-1 font-medium"
-              >
-                <span>Visit Original Website</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            )}
-            <Button variant="primary" onClick={() => setCitationPreview(null)} className="ml-auto">
-              Close Preview
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4 text-xs sm:text-sm text-[#17211D]">
-          <div className="p-3 bg-[#FAFBF9] rounded-xl border border-[#E2E7E3] flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
-              {citationPreview?.sourceKind === 'web' || citationPreview?.url ? (
-                <Globe className="w-4 h-4 text-blue-600 shrink-0" />
-              ) : (
-                <FileText className="w-4 h-4 text-[#1F5E4B] shrink-0" />
-              )}
-              <span className="font-semibold text-[#17211D] truncate">
-                {citationPreview?.documentTitle || citationPreview?.domain || 'Research Source'}
-              </span>
-            </div>
-            <Badge variant={citationPreview?.sourceKind === 'web' || citationPreview?.url ? 'blue' : 'forest'} size="sm">
-              {citationPreview?.sourceKind === 'web' || citationPreview?.url ? 'Web Source' : 'Notebook'}
-            </Badge>
-          </div>
+        notebookId={id}
+        citation={citationPreview}
+      />
 
-          <div className="p-4 bg-white rounded-xl border border-[#D8E9E2] space-y-2 shadow-2xs">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#1F5E4B]">
-              <Quote className="w-3.5 h-3.5" /> Grounded Evidence Passage:
-            </div>
-            <p className="text-[#17211D] text-xs sm:text-sm leading-relaxed border-l-3 border-[#1F5E4B] pl-3 py-1 italic bg-[#FAFBF9] rounded-r-lg">
-              "{citationPreview?.snippet || 'Verifiable source text content extracted during indexing.'}"
-            </p>
-          </div>
-        </div>
-      </Modal>
+      {/* Phase 13 Universal Notebook Search Modal */}
+      <UniversalSearchModal
+        isOpen={universalSearchOpen}
+        onClose={() => setUniversalSearchOpen(false)}
+        notebookId={id}
+        onSelectResult={(item) => {
+          if (item.category === 'insights') {
+            setActiveStudioTab('insights');
+          } else if (item.category === 'sources') {
+            setSelectedSourceSnippet({
+              title: item.title,
+              type: item.type || 'document',
+              snippet: item.snippet,
+            });
+          }
+        }}
+      />
+
+      {/* Phase 13 Research Memory Management Modal */}
+      <MemoryManagementModal
+        isOpen={memoryModalOpen}
+        onClose={() => setMemoryModalOpen(false)}
+        notebookId={id}
+      />
 
       {/* Source Excerpt / Summary Modal */}
       <Modal

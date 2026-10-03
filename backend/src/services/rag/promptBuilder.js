@@ -11,15 +11,17 @@ YOUR CORE GROUNDING & CITATION RULES:
 6. Tone & Formatting: Produce clean, well-organized Markdown explanations with clear headings, bullet points, and definitions.`;
 
 /**
- * Build a structured prompt for Gemini RAG generation
+ * Build a structured prompt for Gemini RAG generation with optional user and notebook memory context
  *
  * @param {Object} params
  * @param {string} params.question - Current user question
  * @param {string} params.contextText - Formatted source context with [SOURCE_X] tags
  * @param {Array<{ role: string, content: string }>} [params.history=[]] - Recent conversation history
+ * @param {Array<Object>} [params.userMemories=[]] - Relevant user preferences / learning goals
+ * @param {Object} [params.notebookMemory=null] - Scoped notebook instructions / goals
  * @returns {string}
  */
-function buildPrompt({ question, contextText, history = [] }) {
+function buildPrompt({ question, contextText, history = [], userMemories = [], notebookMemory = null }) {
   const maxHistory = config.rag?.maxHistoryMessages || 8;
   const recentHistory = Array.isArray(history) ? history.slice(-maxHistory) : [];
 
@@ -33,11 +35,35 @@ function buildPrompt({ question, contextText, history = [] }) {
     historyBlocks.push('=== END CONVERSATION CONTEXT ===');
   }
 
+  const memoryBlocks = [];
+  if (notebookMemory && notebookMemory.active !== false) {
+    if (notebookMemory.studyGoal) {
+      memoryBlocks.push(`- Notebook Study Goal: ${notebookMemory.studyGoal}`);
+    }
+    if (notebookMemory.preferredStyle && notebookMemory.preferredStyle !== 'standard') {
+      memoryBlocks.push(`- Preferred Explanation Style: ${notebookMemory.preferredStyle}`);
+    }
+    if (notebookMemory.customInstructions) {
+      memoryBlocks.push(`- Notebook Instructions: ${notebookMemory.customInstructions}`);
+    }
+  }
+
+  if (Array.isArray(userMemories) && userMemories.length > 0) {
+    for (const mem of userMemories) {
+      memoryBlocks.push(`- User ${mem.type.replace('_', ' ')}: ${mem.content}`);
+    }
+  }
+
+  let memorySection = '';
+  if (memoryBlocks.length > 0) {
+    memorySection = `=== USER & NOTEBOOK PREFERENCES ===\n${memoryBlocks.join('\n')}\n(IMPORTANT: The notebook sources below remain the authoritative fact base. Preferences guide explanation tone and focus only.)\n=== END PREFERENCES ===\n\n`;
+  }
+
   const historySection = historyBlocks.length > 0 ? historyBlocks.join('\n') + '\n\n' : '';
 
   return `${SYSTEM_INSTRUCTION}
 
-${historySection}=== AVAILABLE NOTEBOOK SOURCES ===
+${historySection}${memorySection}=== AVAILABLE NOTEBOOK SOURCES ===
 ${contextText || '(No relevant notebook sources found for this question.)'}
 === END SOURCES ===
 
@@ -51,3 +77,4 @@ module.exports = {
   SYSTEM_INSTRUCTION,
   buildPrompt,
 };
+
