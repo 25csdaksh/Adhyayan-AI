@@ -122,52 +122,39 @@ export const SourceCard = ({
   return (
     <div
       onClick={onSelect}
-      className={`group p-3 rounded-xl border transition-all duration-150 flex flex-col gap-2 cursor-pointer select-none
+      className={`group p-3.5 rounded-2xl border transition-all duration-200 flex flex-col gap-2.5 cursor-pointer select-none
         ${isSelected
-          ? 'bg-[#E8F2EE] border-[#1F5E4B] shadow-2xs'
-          : 'bg-white border-[#E2E7E3] hover:border-[#BAC5C0] hover:bg-[#FAFBF9]'}`}
+          ? 'bg-[#E8F2EE]/80 border-[#1F5E4B] shadow-sm'
+          : 'bg-white border-[#E2E7E3] hover:border-[#BAC5C0] hover:shadow-xs hover:bg-[#FAFBF9]'}`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${bg}`}>
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs ${bg}`}>
             {icon}
           </div>
 
           <div className="min-w-0 flex-1">
             <p
-              className="text-xs font-semibold text-[#17211D] truncate group-hover:text-[#1F5E4B] transition-colors"
+              className="text-xs font-bold text-[#17211D] leading-snug line-clamp-2 group-hover:text-[#1F5E4B] transition-colors"
               title={source.title}
             >
               {source.title}
             </p>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <span className="text-[10px] font-medium text-[#8E9993]">{label}</span>
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-[11px] text-[#6B756F]">
+              <span className="font-semibold text-[#17211D] bg-[#F2F5F3] px-1.5 py-0.5 rounded text-[10px]">{label}</span>
               {metadata.pageCount && (
-                <>
-                  <span className="text-[10px] text-[#8E9993]">•</span>
-                  <span className="text-[10px] text-[#6B756F]">{metadata.pageCount} pgs</span>
-                </>
+                <span className="text-[10px] bg-[#F7F8F6] border border-[#E2E7E3] px-1.5 py-0.5 rounded font-medium text-[#4A5550]">
+                  {metadata.pageCount} pgs
+                </span>
               )}
               {metadata.chunkCount !== undefined && metadata.chunkCount > 0 && (
-                <>
-                  <span className="text-[10px] text-[#8E9993]">•</span>
-                  <span className="text-[10px] text-[#1F5E4B] font-medium">{metadata.chunkCount} chunks</span>
-                </>
+                <span className="text-[10px] bg-[#E8F2EE] border border-[#D8E9E2] px-1.5 py-0.5 rounded font-medium text-[#1F5E4B]">
+                  {metadata.chunkCount} chunks
+                </span>
               )}
               {formattedSize && (
-                <>
-                  <span className="text-[10px] text-[#8E9993]">•</span>
-                  <span className="text-[10px] text-[#6B756F]">{formattedSize}</span>
-                </>
+                <span className="text-[10px] text-[#8E9993] font-medium">{formattedSize}</span>
               )}
-              {relativeDate && (
-                <>
-                  <span className="text-[10px] text-[#8E9993]">•</span>
-                  <span className="text-[10px] text-[#8E9993]">{relativeDate}</span>
-                </>
-              )}
-              <span className="text-[10px] text-[#8E9993]">•</span>
-              {renderStatus()}
             </div>
           </div>
         </div>
@@ -177,7 +164,7 @@ export const SourceCard = ({
             <button
               type="button"
               onClick={() => onViewDetails(source)}
-              className="p-1 text-[#6B756F] hover:text-[#1F5E4B] hover:bg-[#E8F2EE] rounded-md transition-colors cursor-pointer"
+              className="p-1.5 text-[#6B756F] hover:text-[#1F5E4B] hover:bg-[#E8F2EE] rounded-lg transition-colors cursor-pointer"
               title="View Summary & Intelligence"
             >
               <BookOpen className="w-3.5 h-3.5" />
@@ -188,7 +175,7 @@ export const SourceCard = ({
             trigger={
               <button
                 type="button"
-                className="p-1 text-[#8E9993] hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-md transition-colors cursor-pointer"
+                className="p-1.5 text-[#8E9993] hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors cursor-pointer"
                 aria-label="Source options"
               >
                 <MoreVertical className="w-3.5 h-3.5" />

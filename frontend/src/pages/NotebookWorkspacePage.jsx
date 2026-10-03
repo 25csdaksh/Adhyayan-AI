@@ -489,58 +489,69 @@ export const NotebookWorkspacePage = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] -m-4 sm:-m-6 lg:-m-8 bg-[#F7F8F6] overflow-hidden">
-      {/* Workspace Sub-Header */}
-      <div className="bg-white border-b border-[#E2E7E3] px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4 shrink-0">
+    <div className="flex flex-col h-screen w-screen bg-[#F8FAF8] overflow-hidden select-none text-[#17211D]">
+      {/* Workspace Unified Top Header */}
+      <div className="bg-white/95 backdrop-blur-md border-b border-[#E2E7E3] px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4 shrink-0 z-10 shadow-2xs">
+        {/* Left: Brand, Back, Title, Status */}
         <div className="flex items-center gap-3 min-w-0">
           <Link
             to="/dashboard"
-            className="p-1.5 text-[#6B756F] hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors"
+            className="p-2 text-[#6B756F] hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-xl transition-all flex items-center gap-1 text-xs font-semibold"
             title="Back to Dashboard"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
           </Link>
+
+          <div className="h-5 w-px bg-[#E2E7E3] hidden sm:block" />
+
+          {/* Logo & Breadcrumb */}
+          <Link to="/dashboard" className="hidden sm:flex items-center gap-2 group">
+            <div className="w-7 h-7 rounded-lg bg-[#1F5E4B] text-white flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+              <BookOpen className="w-3.5 h-3.5" />
+            </div>
+            <span className="font-bold text-xs text-[#17211D] tracking-tight">Adhyayan-AI</span>
+          </Link>
+
+          <span className="text-[#8E9993] hidden sm:inline">/</span>
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-sm sm:text-base font-bold text-[#17211D] truncate">
+              <h1 className="text-sm font-bold text-[#17211D] truncate max-w-[200px] sm:max-w-xs md:max-w-sm">
                 {notebook.title}
               </h1>
-              <Badge variant="forest" size="sm" dot>
-                {sources.length + webSources.length} sources active
-              </Badge>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F2EE] text-[#1F5E4B] border border-[#D8E9E2] flex items-center gap-1 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#1F5E4B] animate-pulse" />
+                {sources.length + webSources.length} {sources.length + webSources.length === 1 ? 'source' : 'sources'} active
+              </span>
             </div>
-            <p className="text-[11px] text-[#6B756F] truncate hidden sm:block">
-              {notebook.description || 'Personalized study and research workspace'}
-            </p>
           </div>
         </div>
 
-        {/* Phase 13 Universal Search & Research Memory Quick Actions */}
-        <div className="flex items-center gap-2">
+        {/* Center: Universal Search & Research Memory */}
+        <div className="hidden md:flex items-center gap-2">
           <button
             type="button"
             onClick={() => setUniversalSearchOpen(true)}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E2E7E3] hover:border-[#1F5E4B] text-xs font-semibold text-[#6B756F] hover:text-[#17211D] bg-[#F7F8F6] hover:bg-white transition-all cursor-pointer shadow-2xs"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E2E7E3] hover:border-[#1F5E4B] text-xs font-semibold text-[#6B756F] hover:text-[#17211D] bg-[#F7F8F6] hover:bg-white transition-all cursor-pointer shadow-2xs"
             title="Universal Notebook Search"
           >
             <Search className="w-3.5 h-3.5 text-[#1F5E4B]" />
             <span>Search Notebook</span>
-            <kbd className="text-[10px] px-1.5 py-0.5 bg-white border border-[#E2E7E3] rounded text-[#8E9993]">⌘K</kbd>
+            <kbd className="text-[10px] px-1.5 py-0.5 bg-white border border-[#E2E7E3] rounded text-[#8E9993] font-mono">⌘K</kbd>
           </button>
 
           <button
             type="button"
             onClick={() => setMemoryModalOpen(true)}
-            className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl border border-[#E2E7E3] hover:border-[#1F5E4B] text-xs font-semibold text-[#1F5E4B] bg-[#E8F2EE] hover:bg-[#D8E9E2] transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-xl border border-[#E2E7E3] hover:border-[#1F5E4B] text-xs font-semibold text-[#1F5E4B] bg-[#E8F2EE]/70 hover:bg-[#D8E9E2] transition-colors cursor-pointer flex items-center gap-1.5"
             title="Research Memory & Directives"
           >
-            <Brain className="w-4 h-4 text-[#1F5E4B]" />
-            <span className="hidden sm:inline">Memory</span>
+            <Brain className="w-3.5 h-3.5 text-[#1F5E4B]" />
+            <span>Memory</span>
           </button>
 
           {/* Panel collapse controls for Desktop */}
-          <div className="hidden xl:flex items-center gap-1 text-[#8E9993] border-l border-[#E2E7E3] pl-2">
+          <div className="flex items-center gap-1 text-[#8E9993] border-l border-[#E2E7E3] pl-2">
             <button
               type="button"
               onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
@@ -597,6 +608,7 @@ export const NotebookWorkspacePage = () => {
           </button>
         </div>
 
+        {/* Right: Actions & Tools */}
         <div className="hidden sm:flex items-center gap-2">
           {/* Chat Sessions Dropdown */}
           {chatSessions.length > 0 && (
@@ -604,7 +616,7 @@ export const NotebookWorkspacePage = () => {
               trigger={
                 <button
                   type="button"
-                  className="px-3 py-1.5 rounded-lg border border-[#E2E7E3] hover:border-[#1F5E4B] text-xs font-semibold text-[#17211D] bg-white flex items-center gap-1.5 transition-colors cursor-pointer max-w-[180px]"
+                  className="px-3 py-1.5 rounded-xl border border-[#E2E7E3] hover:border-[#1F5E4B] text-xs font-semibold text-[#17211D] bg-white flex items-center gap-1.5 transition-colors cursor-pointer max-w-[170px]"
                 >
                   <MessageSquare className="w-3.5 h-3.5 text-[#1F5E4B]" />
                   <span className="truncate">{activeSession?.title || 'Chat History'}</span>
@@ -641,33 +653,33 @@ export const NotebookWorkspacePage = () => {
             </Dropdown>
           )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={Plus}
+          <button
+            type="button"
             onClick={handleNewChat}
+            className="px-3 py-1.5 rounded-xl border border-[#E2E7E3] hover:border-[#1F5E4B] text-xs font-semibold text-[#4A5550] hover:text-[#17211D] bg-white hover:bg-[#FAFBF9] transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
             title="Start new chat thread"
           >
-            New Chat
-          </Button>
+            <Plus className="w-3.5 h-3.5 text-[#1F5E4B]" />
+            <span>New Chat</span>
+          </button>
 
-          <Button
-            variant="secondary"
-            size="sm"
-            leftIcon={Globe}
+          <button
+            type="button"
             onClick={() => setAddWebSourceOpen(true)}
+            className="px-3 py-1.5 rounded-xl border border-blue-200 text-blue-700 bg-blue-50/70 hover:bg-blue-100/70 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
           >
-            Add Web
-          </Button>
+            <Globe className="w-3.5 h-3.5" />
+            <span>Add Web</span>
+          </button>
 
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={Plus}
+          <button
+            type="button"
             onClick={() => setAddSourceOpen(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#1F5E4B] to-[#164E3D] text-white hover:opacity-95 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs shadow-[#1F5E4B]/20"
           >
-            Add Doc
-          </Button>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Doc</span>
+          </button>
         </div>
       </div>
 
@@ -676,7 +688,7 @@ export const NotebookWorkspacePage = () => {
         {/* PANEL 1: LEFT SOURCES PANEL */}
         <div
           className={`bg-white border-r border-[#E2E7E3] flex flex-col transition-all duration-200 shrink-0
-            ${leftPanelCollapsed ? 'w-0 hidden' : 'w-72 sm:w-80'}
+            ${leftPanelCollapsed ? 'w-0 hidden' : 'w-76 sm:w-80'}
             ${mobileActivePanel === 'sources' ? 'flex w-full absolute inset-0 z-20 pt-16 bg-white' : 'hidden lg:flex'}`}
         >
           {/* Sources Header */}
@@ -850,17 +862,95 @@ export const NotebookWorkspacePage = () => {
                 />
               ))
             ) : (
-              /* Empty Chat State */
-              <div className="min-h-[50vh] flex flex-col items-center justify-center text-center p-6 max-w-md mx-auto space-y-4">
-                <div className="w-14 h-14 rounded-2xl bg-[#E8F2EE] border border-[#D8E9E2] text-[#1F5E4B] flex items-center justify-center shadow-2xs">
+              /* Empty Chat State - Premium Interactive Prompt Cards */
+              <div className="min-h-[55vh] flex flex-col items-center justify-center text-center p-6 max-w-xl mx-auto space-y-6">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#1F5E4B] to-[#144234] text-white flex items-center justify-center shadow-lg shadow-[#1F5E4B]/20">
                   <Sparkles className="w-7 h-7" />
                 </div>
-                <h3 className="text-base sm:text-lg font-bold text-[#17211D]">
-                  Ask anything about your sources
-                </h3>
-                <p className="text-xs sm:text-sm text-[#6B756F] leading-relaxed">
-                  Upload materials and start exploring your knowledge. Every answer is grounded directly in your notebook documents and web sources with verifiable citations and personalized study directives.
-                </p>
+                
+                <div className="space-y-1.5">
+                  <h3 className="text-lg font-bold text-[#17211D] tracking-tight">
+                    Explore Your Research Materials
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#6B756F] leading-relaxed max-w-md mx-auto">
+                    Every response is strictly grounded in your active documents and web sources with verified citations.
+                  </p>
+                </div>
+
+                {/* 4 Interactive Starter Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full text-left pt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSendMessage('Please provide a structured executive summary of all uploaded sources with key takeaways and important concepts.')}
+                    className="p-3.5 bg-white/95 hover:bg-[#FAFBF9] border border-[#E2E7E3] hover:border-[#1F5E4B] rounded-2xl transition-all duration-150 cursor-pointer shadow-2xs hover:shadow-xs hover:-translate-y-0.5 group space-y-1"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-[#E8F2EE] text-[#1F5E4B] flex items-center justify-center shrink-0">
+                        <FileText className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-xs font-bold text-[#17211D] group-hover:text-[#1F5E4B] transition-colors">
+                        Executive Summary
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#6B756F] line-clamp-2">
+                      Synthesize key takeaways and core concepts across sources.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSendMessage('Create 5 multiple choice practice questions based on the key concepts in my sources, with answer explanations.')}
+                    className="p-3.5 bg-white/95 hover:bg-[#FAFBF9] border border-[#E2E7E3] hover:border-[#1F5E4B] rounded-2xl transition-all duration-150 cursor-pointer shadow-2xs hover:shadow-xs hover:-translate-y-0.5 group space-y-1"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                        <HelpCircle className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-xs font-bold text-[#17211D] group-hover:text-[#1F5E4B] transition-colors">
+                        Practice Quiz
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#6B756F] line-clamp-2">
+                      Test your understanding with 5 grounded MCQs and explanations.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSendMessage('Generate an active recall study outline with core terms and definitions from my materials.')}
+                    className="p-3.5 bg-white/95 hover:bg-[#FAFBF9] border border-[#E2E7E3] hover:border-[#1F5E4B] rounded-2xl transition-all duration-150 cursor-pointer shadow-2xs hover:shadow-xs hover:-translate-y-0.5 group space-y-1"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                        <Layers className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-xs font-bold text-[#17211D] group-hover:text-[#1F5E4B] transition-colors">
+                        Study Flashcards
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#6B756F] line-clamp-2">
+                      Build rapid recall decks covering formulas and definitions.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSendMessage('Compare and contrast the primary arguments, methodologies, and findings presented in the sources.')}
+                    className="p-3.5 bg-white/95 hover:bg-[#FAFBF9] border border-[#E2E7E3] hover:border-[#1F5E4B] rounded-2xl transition-all duration-150 cursor-pointer shadow-2xs hover:shadow-xs hover:-translate-y-0.5 group space-y-1"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                        <GitCompare className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-xs font-bold text-[#17211D] group-hover:text-[#1F5E4B] transition-colors">
+                        Compare & Contrast
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#6B756F] line-clamp-2">
+                      Cross-analyze definitions, pros & cons, and methodologies.
+                    </p>
+                  </button>
+                </div>
               </div>
             )}
 

@@ -136,28 +136,40 @@ export const StudyToolsPanel = ({
       title: 'Executive Summary',
       description: 'Grounded executive overview with key takeaways and concept glossary.',
       icon: FileText,
-      badge: 'Grounded Overview',
+      badge: 'Overview',
+      iconColor: 'text-[#1F5E4B]',
+      iconBg: 'bg-[#E8F2EE]',
+      activeBorder: 'border-[#1F5E4B] ring-2 ring-[#1F5E4B]/15 bg-gradient-to-br from-[#E8F2EE]/40 via-white to-[#FAFBF9]',
     },
     {
       id: 'flashcards',
       title: 'Active Recall Flashcards',
       description: 'Flip-card decks with questions, answers, and source citations.',
       icon: Layers,
-      badge: 'Interactive Cards',
+      badge: 'Flashcards',
+      iconColor: 'text-indigo-600',
+      iconBg: 'bg-indigo-50',
+      activeBorder: 'border-indigo-600 ring-2 ring-indigo-600/15 bg-gradient-to-br from-indigo-50/40 via-white to-[#FAFBF9]',
     },
     {
       id: 'quiz',
       title: 'Multiple Choice Quiz',
       description: '4-option assessment testing grounded comprehension with score review.',
       icon: HelpCircle,
-      badge: 'Knowledge Check',
+      badge: 'Assessment',
+      iconColor: 'text-amber-600',
+      iconBg: 'bg-amber-50',
+      activeBorder: 'border-amber-600 ring-2 ring-amber-600/15 bg-gradient-to-br from-amber-50/40 via-white to-[#FAFBF9]',
     },
     {
       id: 'mindmap',
       title: 'Knowledge Mind Map',
       description: 'Hierarchical concept taxonomy and relational branch tree.',
       icon: GitFork,
-      badge: 'Concept Tree',
+      badge: 'Mind Map',
+      iconColor: 'text-purple-600',
+      iconBg: 'bg-purple-50',
+      activeBorder: 'border-purple-600 ring-2 ring-purple-600/15 bg-gradient-to-br from-purple-50/40 via-white to-[#FAFBF9]',
     },
   ];
 
@@ -175,17 +187,17 @@ export const StudyToolsPanel = ({
           </p>
         </div>
 
-        <div className="flex items-center bg-[#FAFBF9] border border-[#E2E7E3] rounded-lg p-0.5">
+        <div className="flex items-center bg-[#F2F5F3] border border-[#E2E7E3] rounded-xl p-1">
           <button
             type="button"
             onClick={() => setActiveTab('create')}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               activeTab === 'create'
                 ? 'bg-white text-[#17211D] shadow-2xs font-bold'
                 : 'text-[#6B756F] hover:text-[#17211D]'
             }`}
           >
-            Studio Generator
+            Generator
           </button>
           <button
             type="button"
@@ -193,13 +205,13 @@ export const StudyToolsPanel = ({
               setActiveTab('history');
               fetchHistory();
             }}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'history'
                 ? 'bg-white text-[#17211D] shadow-2xs font-bold'
                 : 'text-[#6B756F] hover:text-[#17211D]'
             }`}
           >
-            <History className="w-3 h-3" />
+            <History className="w-3.5 h-3.5" />
             History ({studyToolsList.length})
           </button>
         </div>
@@ -208,7 +220,7 @@ export const StudyToolsPanel = ({
       {activeTab === 'create' ? (
         <div className="space-y-4">
           {/* Tool Selector Cards */}
-          <div className="grid gap-2.5 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             {toolsConfig.map((tool) => {
               const Icon = tool.icon;
               const isSelected = selectedToolType === tool.id;
@@ -217,27 +229,31 @@ export const StudyToolsPanel = ({
                 <div
                   key={tool.id}
                   onClick={() => setSelectedToolType(tool.id)}
-                  className={`p-3 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between ${
+                  className={`p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between select-none shadow-2xs hover:shadow-xs hover:-translate-y-0.5 ${
                     isSelected
-                      ? 'border-[#1F5E4B] bg-[#E8EFEA]/30 ring-1 ring-[#1F5E4B]'
-                      : 'border-[#E2E7E3] bg-white hover:border-[#1F5E4B]/60 hover:bg-[#FAFBF9]'
+                      ? `${tool.activeBorder} shadow-sm`
+                      : 'border-[#E2E7E3] bg-white hover:border-[#BAC5C0] hover:bg-[#FAFBF9]'
                   }`}
                 >
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <div className="w-7 h-7 rounded-lg bg-[#E8EFEA] text-[#1F5E4B] flex items-center justify-center">
-                        <Icon className="w-3.5 h-3.5" />
+                      <div className={`w-8 h-8 rounded-xl ${tool.iconBg} ${tool.iconColor} flex items-center justify-center shadow-2xs`}>
+                        <Icon className="w-4 h-4" />
                       </div>
-                      <Badge variant={isSelected ? 'forest' : 'neutral'} size="sm">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        isSelected ? 'bg-white border-current ' + tool.iconColor : 'bg-[#F2F5F3] text-[#6B756F] border-transparent'
+                      }`}>
                         {tool.badge}
-                      </Badge>
+                      </span>
                     </div>
-                    <h4 className="text-xs font-bold text-[#17211D]">
-                      {tool.title}
-                    </h4>
-                    <p className="text-[11px] text-[#6B756F] line-clamp-2 leading-relaxed">
-                      {tool.description}
-                    </p>
+                    <div>
+                      <h4 className="text-xs font-bold text-[#17211D]">
+                        {tool.title}
+                      </h4>
+                      <p className="text-[11px] text-[#6B756F] line-clamp-2 leading-relaxed mt-0.5">
+                        {tool.description}
+                      </p>
+                    </div>
                   </div>
                 </div>
               );

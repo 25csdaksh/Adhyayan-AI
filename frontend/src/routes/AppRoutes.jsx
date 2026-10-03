@@ -27,10 +27,13 @@ export const AppRoutes = () => {
 
       {/* Authenticated / Protected Application Routes */}
       <Route element={<ProtectedRoute />}>
+        {/* Dedicated Full-Screen Notebook Workspace */}
+        <Route path="/notebooks/:id" element={<NotebookWorkspacePage />} />
+
+        {/* Standard App Pages with Sidebar & Header */}
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/notebooks" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/notebooks/:id" element={<NotebookWorkspacePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/health" element={<HealthPage />} />
