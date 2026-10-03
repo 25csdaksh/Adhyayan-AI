@@ -20,9 +20,8 @@ app.use(requestIdMiddleware);
 // Security HTTP headers
 app.use(helmet());
 
-// CORS Configuration supporting localhost dev ports dynamically
-const allowedOrigins = [
-  config.clientUrl,
+// CORS Configuration supporting explicit production origins & dev local ports
+const devOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:5174',
@@ -37,10 +36,10 @@ app.use(
       if (!origin) {
         return callback(null, true);
       }
-      if (
-        allowedOrigins.includes(origin) ||
-        (!config.isProduction && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin))
-      ) {
+      const isAllowed = config.allowedOrigins.includes(origin);
+      const isDevLocal = !config.isProduction && (devOrigins.includes(origin) || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin));
+
+      if (isAllowed || isDevLocal) {
         return callback(null, true);
       }
       return callback(new Error(`CORS policy blocked access from origin: ${origin}`));

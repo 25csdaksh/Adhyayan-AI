@@ -1,0 +1,60 @@
+name: StudyLM CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-test:
+    name: Backend Test Suite (Phases 04-17)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install root and backend dependencies
+        run: |
+          npm ci
+          cd backend && npm ci
+
+      - name: Run Complete Master Regression Suite
+        run: |
+          cd backend
+          node tests/runAllTests.js
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test_mock_jwt_secret_key_minimum_32_characters_here
+          ENABLE_PSEUDO_EMBEDDING_FALLBACK: false
+          PAYMENT_PROVIDER: mock
+
+  frontend-build:
+    name: Frontend Production Build Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend && npm ci
+
+      - name: Compile Vite Production Bundle
+        run: |
+          cd frontend
+          npm run build

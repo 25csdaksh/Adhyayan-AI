@@ -59,10 +59,21 @@
 
 ---
 
-### 5. Productization & UX Readiness
-- [x] First-time user onboarding tour with step-by-step guidance.
-- [x] Dashboard quick statistics and empty state workflows.
-- [x] Account settings with profile editing, Bcrypt password updates, and usage dashboard.
-- [x] Self-service full user data export (`.json`).
-- [x] Cascading account and data deletion across all 16 collections.
-- [x] 100% test pass rate across all 15 project phases (85/85 tests passed).
+### 5. Productization, Subscriptions & Monetization (Phase 16)
+- [x] Subscription and billing data models (`Subscription`, `Payment`, `BillingEvent`) with compound indexes.
+- [x] Server-authoritative checkout and pricing (₹999/mo Pro, ₹4,999/mo Enterprise).
+- [x] Cryptographic HMAC-SHA256 signature verification on payment completion and webhooks.
+- [x] Idempotent webhook processing preventing duplicate activations or replay attacks.
+- [x] Real-time entitlement synchronization with graceful cancellation at period end.
+- [x] Full UI for plan selection, Razorpay modal checkout, and subscription management.
+
+---
+
+### 6. Production Deployment Readiness (Phase 17)
+- [x] Multi-tier PM2 cluster configuration (`ecosystem.config.js`).
+- [x] Hardened Nginx reverse proxy configuration with TLS and rate limiting (`nginx/studylm.conf`).
+- [x] Containerized multi-stage Docker and Docker Compose definitions (`docker-compose.yml`).
+- [x] Strict CORS origin lockdown via `ALLOWED_ORIGINS`.
+- [x] GitHub Actions automated CI verification (`.github/workflows/ci.yml`).
+- [x] Production disaster recovery runbook and MongoDB backup procedures (`docs/OPERATIONS.md`).
+- [x] 100% test pass rate across all 14 project test suites (106/106 tests passed).

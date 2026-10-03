@@ -82,16 +82,34 @@ const config = {
       enterpriseMonthly: parseInt(process.env.ENTERPRISE_PLAN_PRICE_INR || '4999', 10), // ₹4,999 / month
     },
   },
+  allowedOrigins: (process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+    : [process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173']
+  ).filter(Boolean),
 };
 
-// Validate critical configurations
-if (!process.env.PORT) {
-  console.warn('[Config Warning] PORT is not explicitly set in environment, defaulting to 5000');
-}
+// Validate critical production configurations
+if (config.isProduction) {
+  const missingSecrets = [];
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    missingSecrets.push('JWT_SECRET (must be >= 32 chars)');
+  }
+  if (!process.env.MONGO_URI) {
+    missingSecrets.push('MONGO_URI');
+  }
+  if (!process.env.GEMINI_API_KEY) {
+    missingSecrets.push('GEMINI_API_KEY');
+  }
 
-if (!process.env.JWT_SECRET && config.isProduction) {
-  console.error('[Config Error] JWT_SECRET must be defined in production environment');
-  process.exit(1);
+  if (missingSecrets.length > 0) {
+    console.error(`[CRITICAL CONFIG ERROR] Missing required production environment variables: ${missingSecrets.join(', ')}`);
+    process.exit(1);
+  }
+
+  if (config.gemini.enablePseudoEmbeddingFallback) {
+    console.error('[CRITICAL CONFIG ERROR] ENABLE_PSEUDO_EMBEDDING_FALLBACK must be false in production');
+    process.exit(1);
+  }
 }
 
 module.exports = config;

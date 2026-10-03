@@ -18,10 +18,11 @@ const { runTests: runPhase13PersonalizationTests } = require('./phase13Personali
 const { runPhase14Tests } = require('./phase14Research.test');
 const { runPhase15Tests } = require('./phase15Production.test');
 const { runPhase16Tests } = require('./phase16Billing.test');
+const { runPhase17Tests } = require('./phase17Deployment.test');
 
 async function main() {
   console.log('================================================================');
-  console.log('  StudyLM (Adhyayan-AI) — Comprehensive Verification (Phases 04-16)');
+  console.log('  StudyLM (Adhyayan-AI) — Comprehensive Verification (Phases 04-17)');
   console.log('================================================================\n');
 
   // Phase 10 / Baseline Regressions
@@ -54,9 +55,13 @@ async function main() {
   // Phase 16 Production Subscription, Billing & Monetization
   const billing = await runPhase16Tests();
 
+  // Phase 17 Production Deployment Readiness & Live Launch Verification
+  const deployment = await runPhase17Tests();
+
   console.log('================================================================');
-  console.log('  COMPREHENSIVE REGRESSION VERIFICATION SUMMARY (PHASES 04-16):');
+  console.log('  COMPREHENSIVE REGRESSION VERIFICATION SUMMARY (PHASES 04-17):');
   console.log('================================================================');
+  console.log(`  Phase 17 Deployment & Launch: ${deployment.passed}/${deployment.total}`);
   console.log(`  Phase 16 Subscription & Billing: ${billing.passed}/${billing.total}`);
   console.log(`  Phase 15 Productization & Launch: ${production.passed}/${production.total}`);
   console.log(`  Phase 14 Advanced Research & Synthesis: ${advancedResearch.passed}/${advancedResearch.total}`);
@@ -90,7 +95,8 @@ async function main() {
     personalization.passed +
     advancedResearch.passed +
     production.passed +
-    billing.passed;
+    billing.passed +
+    deployment.passed;
 
   const totalTests =
     sourceAnalysis.total +
@@ -108,7 +114,8 @@ async function main() {
     personalization.total +
     advancedResearch.total +
     production.total +
-    billing.total;
+    billing.total +
+    deployment.total;
 
   console.log('----------------------------------------------------------------');
   console.log(`  OVERALL TOTAL: ${totalPassed}/${totalTests} PASSED (100%)`);
