@@ -54,23 +54,23 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#F7F8F6] text-[#17211D]">
+    <div className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#FAF8F3] text-[#141F1A]">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-3">
         {/* Brand Logo */}
         <Link to="/" className="inline-flex items-center justify-center group mb-2">
           <BrandLogo size="lg" className="group-hover:scale-105 transition-transform" />
         </Link>
 
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#17211D] tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[#141F1A] tracking-tight">
           Welcome back
         </h1>
-        <p className="text-xs sm:text-sm text-[#6B756F]">
+        <p className="text-xs sm:text-sm text-[#5B6660]">
           Sign in to access your intelligent notebooks and grounded sources.
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <Card className="p-6 sm:p-8 shadow-md border-[#E2E7E3] space-y-6">
+        <Card className="p-6 sm:p-8 shadow-md border-[#E5E1D7] bg-white space-y-6">
           {formError && (
             <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5 animate-in fade-in">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />

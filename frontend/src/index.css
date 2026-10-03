@@ -1,6 +1,22 @@
 @import "tailwindcss";
 
 @theme {
+  /* 60% Dominant: Eggshell White & Warm Paper Surfaces */
+  --color-background: #FAF8F3;
+  --color-surface: #FFFFFF;
+  --color-surface-warm: #FCFBF8;
+  --color-surface-hover: #F3EFE6;
+  --color-surface-subtle: #F7F5EE;
+  
+  /* 30% Secondary: Deep Academic Ink, Muted Slate & Structural Borders */
+  --color-text-main: #141F1A;
+  --color-text-muted: #5B6660;
+  --color-text-light: #7F8C85;
+  --color-border: #E5E1D7;
+  --color-border-subtle: #EDEAE1;
+  --color-border-hover: #D0C9BA;
+
+  /* 10% Accent: Deep Emerald Forest & Luminous Gold */
   --color-primary: #1F5E4B;
   --color-primary-dark: #174638;
   --color-primary-light: #E8F2EE;
@@ -8,14 +24,6 @@
   --color-accent: #D6A84F;
   --color-accent-dark: #B88E3B;
   --color-accent-light: #FAF4E8;
-  --color-surface: #FFFFFF;
-  --color-surface-hover: #F2F5F3;
-  --color-background: #F7F8F6;
-  --color-border: #E2E7E3;
-  --color-border-subtle: #EDF1EE;
-  --color-text-main: #17211D;
-  --color-text-muted: #6B756F;
-  --color-text-light: #8E9993;
 
   --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -27,17 +35,17 @@
     --primary-dark: #174638;
     --primary-light: #E8F2EE;
     --accent: #D6A84F;
-    --bg-page: #F7F8F6;
+    --bg-page: #FAF8F3;
     --surface: #FFFFFF;
-    --text-primary: #17211D;
-    --text-secondary: #6B756F;
-    --border-main: #E2E7E3;
+    --text-primary: #141F1A;
+    --text-secondary: #5B6660;
+    --border-main: #E5E1D7;
   }
 
   body {
     font-family: var(--font-sans);
-    background-color: #F7F8F6;
-    color: #17211D;
+    background-color: #FAF8F3;
+    color: #141F1A;
     margin: 0;
     padding: 0;
     min-height: 100vh;
@@ -49,11 +57,12 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    background-color: #FAF8F3;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-sans);
-    color: #17211D;
+    color: #141F1A;
     letter-spacing: -0.015em;
   }
 }

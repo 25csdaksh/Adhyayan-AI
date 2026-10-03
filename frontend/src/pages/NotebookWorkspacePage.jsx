@@ -490,9 +490,9 @@ export const NotebookWorkspacePage = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#F8FAF8] overflow-hidden select-none text-[#17211D]">
+    <div className="flex flex-col h-screen w-screen bg-[#FAF8F3] overflow-hidden select-none text-[#141F1A]">
       {/* Workspace Unified Top Header */}
-      <div className="bg-white/95 backdrop-blur-md border-b border-[#E2E7E3] px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4 shrink-0 z-10 shadow-2xs">
+      <div className="bg-white/95 backdrop-blur-md border-b border-[#E5E1D7] px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4 shrink-0 z-10 shadow-2xs">
         {/* Left: Brand, Back, Title, Status */}
         <div className="flex items-center gap-3 min-w-0">
           <Link
@@ -833,7 +833,7 @@ export const NotebookWorkspacePage = () => {
 
         {/* PANEL 2: CENTER AI CHAT PANEL */}
         <div
-          className={`flex-1 flex flex-col bg-[#F7F8F6] min-w-0
+          className={`flex-1 flex flex-col bg-[#FAF8F3] min-w-0
             ${mobileActivePanel === 'chat' ? 'flex' : 'hidden lg:flex'}`}
         >
           {/* Chat Messages Feed */}
@@ -975,7 +975,7 @@ export const NotebookWorkspacePage = () => {
           </div>
 
           {/* Chat Input Container */}
-          <div className="p-4 sm:p-6 pt-2 bg-gradient-to-t from-[#F7F8F6] via-[#F7F8F6] to-transparent shrink-0 max-w-4xl w-full mx-auto">
+          <div className="p-4 sm:p-6 pt-2 bg-gradient-to-t from-[#FAF8F3] via-[#FAF8F3] to-transparent shrink-0 max-w-4xl w-full mx-auto">
             <ChatInput
               onSend={handleSendMessage}
               disabled={isSending}

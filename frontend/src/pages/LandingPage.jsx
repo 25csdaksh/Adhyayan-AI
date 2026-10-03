@@ -81,25 +81,25 @@ export const LandingPage = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F7F8F6] text-[#17211D]">
+    <div className="min-h-screen flex flex-col bg-[#FAF8F3] text-[#141F1A]">
       <LandingNavbar />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-16 sm:pt-20 sm:pb-24 border-b border-[#E2E7E3]">
+      <section className="relative overflow-hidden pt-12 pb-16 sm:pt-20 sm:pb-24 border-b border-[#E5E1D7]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#E8F2EE] border border-[#D8E9E2] text-[#1F5E4B] text-xs font-semibold mb-6 shadow-2xs">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Academic AI Research &amp; Study Assistant</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#17211D] tracking-tight max-w-4xl mx-auto leading-tight sm:leading-tight">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#141F1A] tracking-tight max-w-4xl mx-auto leading-tight sm:leading-tight">
             Your knowledge, <br className="hidden sm:inline" />
             <span className="text-[#1F5E4B] underline decoration-[#D6A84F] decoration-wavy decoration-2 underline-offset-8">
               one intelligent notebook.
             </span>
           </h1>
 
-          <p className="mt-6 text-base sm:text-xl text-[#6B756F] max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-6 text-base sm:text-xl text-[#5B6660] max-w-2xl mx-auto leading-relaxed">
             Upload your study material, ask questions, and learn from your own sources. Grounded AI answers, page-level citations, and automated study tools.
           </p>
 

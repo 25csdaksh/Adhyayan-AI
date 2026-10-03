@@ -20,7 +20,7 @@ export const LandingNavbar = () => {
   const { isAuthenticated, user } = useAuth();
 
   return (
-    <header className="sticky top-0 z-40 bg-[#F7F8F6]/90 backdrop-blur-md border-b border-[#E2E7E3]">
+    <header className="sticky top-0 z-40 bg-[#FAF8F3]/90 backdrop-blur-md border-b border-[#E5E1D7]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-18">
           {/* Brand Logo */}
@@ -32,11 +32,11 @@ export const LandingNavbar = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-[#6B756F]">
-            <a href="#how-it-works" className="hover:text-[#17211D] transition-colors">How It Works</a>
-            <a href="#capabilities" className="hover:text-[#17211D] transition-colors">Capabilities</a>
-            <a href="#workspace-preview" className="hover:text-[#17211D] transition-colors">Workspace Preview</a>
-            <a href="#study-tools" className="hover:text-[#17211D] transition-colors">Study Tools</a>
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-[#5B6660]">
+            <a href="#how-it-works" className="hover:text-[#141F1A] transition-colors">How It Works</a>
+            <a href="#capabilities" className="hover:text-[#141F1A] transition-colors">Capabilities</a>
+            <a href="#workspace-preview" className="hover:text-[#141F1A] transition-colors">Workspace Preview</a>
+            <a href="#study-tools" className="hover:text-[#141F1A] transition-colors">Study Tools</a>
           </nav>
 
           {/* Action CTAs */}
