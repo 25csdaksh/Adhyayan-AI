@@ -5,6 +5,7 @@ const ApiResponse = require('../utils/apiResponse');
 const Notebook = require('../models/Notebook');
 const StudyToolResult = require('../models/StudyToolResult');
 const studyToolService = require('../services/studyTools/studyToolService');
+const { recordUsage } = require('../services/usage/entitlementService');
 
 /**
  * Helper to verify notebook ownership
@@ -49,6 +50,9 @@ const createSummary = asyncHandler(async (req, res) => {
       topic,
     });
 
+    recordUsage(req.user._id, 'studyToolsGenerated', 1).catch(() => {});
+    recordUsage(req.user._id, 'aiRequests', 1).catch(() => {});
+
     return ApiResponse.success(
       res,
       { studyTool: studyRecord },
@@ -91,6 +95,9 @@ const createFlashcards = asyncHandler(async (req, res) => {
       difficulty,
       topic,
     });
+
+    recordUsage(req.user._id, 'studyToolsGenerated', 1).catch(() => {});
+    recordUsage(req.user._id, 'aiRequests', 1).catch(() => {});
 
     return ApiResponse.success(
       res,
@@ -135,6 +142,9 @@ const createQuiz = asyncHandler(async (req, res) => {
       topic,
     });
 
+    recordUsage(req.user._id, 'studyToolsGenerated', 1).catch(() => {});
+    recordUsage(req.user._id, 'aiRequests', 1).catch(() => {});
+
     return ApiResponse.success(
       res,
       { studyTool: studyRecord },
@@ -166,6 +176,9 @@ const createMindMap = asyncHandler(async (req, res) => {
       userId: req.user._id,
       topic,
     });
+
+    recordUsage(req.user._id, 'studyToolsGenerated', 1).catch(() => {});
+    recordUsage(req.user._id, 'aiRequests', 1).catch(() => {});
 
     return ApiResponse.success(
       res,

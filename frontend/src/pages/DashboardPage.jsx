@@ -21,6 +21,7 @@ import { DeleteNotebookModal } from '../components/notebooks/DeleteNotebookModal
 import { notebookService } from '../api/notebookService';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { OnboardingModal } from '../components/onboarding/OnboardingModal';
 
 export const DashboardPage = () => {
   const [searchParams] = useSearchParams();
@@ -33,6 +34,16 @@ export const DashboardPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState(initialQuery);
+
+  // Onboarding Modal state
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+
+  useEffect(() => {
+    // If user is loaded and hasn't completed onboarding, prompt tour
+    if (user && user.onboardingCompleted === false) {
+      setOnboardingOpen(true);
+    }
+  }, [user]);
 
   // Modals state
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -144,7 +155,16 @@ export const DashboardPage = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="md"
+            leftIcon={Sparkles}
+            onClick={() => setOnboardingOpen(true)}
+          >
+            Product Tour
+          </Button>
+
           <Button
             variant="primary"
             size="md"
@@ -166,16 +186,18 @@ export const DashboardPage = () => {
           </p>
         </div>
         <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1">
-          <span className="text-xs font-medium text-[#6B756F]">Indexed Sources</span>
-          <p className="text-xl sm:text-2xl font-bold text-[#17211D]">0 documents</p>
+          <span className="text-xs font-medium text-[#6B756F]">Plan Tier</span>
+          <p className="text-xl sm:text-2xl font-bold text-[#1F5E4B]">
+            {(user?.plan || 'Free').toUpperCase()}
+          </p>
         </div>
         <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1">
           <span className="text-xs font-medium text-[#6B756F]">Grounding Status</span>
           <p className="text-xl sm:text-2xl font-bold text-[#1F5E4B]">Zero Hallucination</p>
         </div>
         <div className="p-4 rounded-xl bg-white border border-[#E2E7E3] space-y-1">
-          <span className="text-xs font-medium text-[#6B756F]">Storage Limit</span>
-          <p className="text-xl sm:text-2xl font-bold text-[#17211D]">500 MB <span className="text-xs font-normal text-[#8E9993]">quota</span></p>
+          <span className="text-xs font-medium text-[#6B756F]">Security Status</span>
+          <p className="text-xl sm:text-2xl font-bold text-[#17211D]">SSRF Guarded</p>
         </div>
       </div>
 
@@ -266,6 +288,13 @@ export const DashboardPage = () => {
         onConfirm={handleDeleteNotebook}
         notebookTitle={deletingNotebook?.title || ''}
         isDeleting={isDeleting}
+      />
+
+      {/* Onboarding Tour Modal */}
+      <OnboardingModal
+        isOpen={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+        onComplete={() => setOnboardingOpen(false)}
       />
     </div>
   );

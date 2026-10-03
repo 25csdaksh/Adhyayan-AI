@@ -306,7 +306,11 @@ Produce a structured JSON response with keys:
     },
   });
 
-  // 12. Non-blocking Activity Logging
+  // 12. Non-blocking Activity & Usage Logging
+  const { recordUsage } = require('../usage/entitlementService');
+  recordUsage(userId, 'researchSessions', 1).catch(() => {});
+  recordUsage(userId, 'aiRequests', 1).catch(() => {});
+
   logActivity({
     notebookId,
     userId,

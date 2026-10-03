@@ -222,6 +222,11 @@ const sendMessage = asyncHandler(async (req, res) => {
     model: ragResult.model || 'gemini',
   });
 
+  // Record AI request and chat message usage
+  const { recordUsage } = require('../services/usage/entitlementService');
+  recordUsage(req.user._id, 'aiRequests', 1).catch(() => {});
+  recordUsage(req.user._id, 'chatMessages', 1).catch(() => {});
+
   // 5. Update session title if default
   if (session.title === 'New Chat' || !session.title) {
     const generatedTitle = cleanMessage.length > 40

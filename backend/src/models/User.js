@@ -39,6 +39,19 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    plan: {
+      type: String,
+      enum: ['free', 'pro', 'enterprise'],
+      default: 'free',
+    },
+    onboardingCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    preferences: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
     lastLoginAt: {
       type: Date,
       default: null,

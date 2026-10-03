@@ -16,10 +16,11 @@ const { runTests: runProductionHardeningTests } = require('./productionHardening
 const { runTests: runLoadAndStressTests } = require('./loadAndStress.test');
 const { runTests: runPhase13PersonalizationTests } = require('./phase13Personalization.test');
 const { runPhase14Tests } = require('./phase14Research.test');
+const { runPhase15Tests } = require('./phase15Production.test');
 
 async function main() {
   console.log('================================================================');
-  console.log('  StudyLM (Adhyayan-AI) — Phase 14 Comprehensive Verification');
+  console.log('  StudyLM (Adhyayan-AI) — Comprehensive Verification (Phases 04-15)');
   console.log('================================================================\n');
 
   // Phase 10 / Baseline Regressions
@@ -46,9 +47,13 @@ async function main() {
   // Phase 14 Advanced AI Research & Knowledge Synthesis
   const advancedResearch = await runPhase14Tests();
 
+  // Phase 15 Production Productization & Launch Readiness
+  const production = await runPhase15Tests();
+
   console.log('================================================================');
-  console.log('  PHASE 14 & COMPREHENSIVE REGRESSION VERIFICATION SUMMARY:');
+  console.log('  COMPREHENSIVE REGRESSION VERIFICATION SUMMARY (PHASES 04-15):');
   console.log('================================================================');
+  console.log(`  Phase 15 Productization & Launch: ${production.passed}/${production.total}`);
   console.log(`  Phase 14 Advanced Research & Synthesis: ${advancedResearch.passed}/${advancedResearch.total}`);
   console.log(`  Phase 13 Personalization & UX: ${personalization.passed}/${personalization.total}`);
   console.log(`  Production Hardening: ${hardening.passed}/${hardening.total}`);
@@ -78,7 +83,8 @@ async function main() {
     hardening.passed +
     loadAndStress.passed +
     personalization.passed +
-    advancedResearch.passed;
+    advancedResearch.passed +
+    production.passed;
 
   const totalTests =
     sourceAnalysis.total +
@@ -94,7 +100,8 @@ async function main() {
     hardening.total +
     loadAndStress.total +
     personalization.total +
-    advancedResearch.total;
+    advancedResearch.total +
+    production.total;
 
   console.log('----------------------------------------------------------------');
   console.log(`  OVERALL TOTAL: ${totalPassed}/${totalTests} PASSED (100%)`);

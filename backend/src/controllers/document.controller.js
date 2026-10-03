@@ -6,6 +6,7 @@ const Chunk = require('../models/Chunk');
 const { uploadStream, deleteAsset } = require('../config/cloudinary');
 const { processDocument, triggerAsyncProcessing } = require('../services/document/documentProcessor');
 const { logActivity } = require('../services/activity/activityService');
+const { recordUsage } = require('../services/usage/entitlementService');
 const asyncHandler = require('../utils/asyncHandler');
 
 const ApiResponse = require('../utils/apiResponse');
@@ -105,6 +106,9 @@ const createDocument = asyncHandler(async (req, res) => {
         details: document.title,
       });
 
+      recordUsage(req.user._id, 'sourceProcessingOps', 1).catch(() => {});
+      recordUsage(req.user._id, 'embeddingRequests', 1).catch(() => {});
+
       return ApiResponse.success(res, { document }, 'Document uploaded successfully', 201);
     } catch (dbErr) {
       if (uploadResult?.public_id) {
@@ -150,6 +154,9 @@ const createDocument = asyncHandler(async (req, res) => {
       details: document.title,
     });
 
+    recordUsage(req.user._id, 'sourceProcessingOps', 1).catch(() => {});
+    recordUsage(req.user._id, 'embeddingRequests', 1).catch(() => {});
+
     return ApiResponse.success(res, { document }, 'Text source created successfully', 201);
   }
 
@@ -192,6 +199,9 @@ const createDocument = asyncHandler(async (req, res) => {
       title: 'Added Web URL Source',
       details: document.title,
     });
+
+    recordUsage(req.user._id, 'sourceProcessingOps', 1).catch(() => {});
+    recordUsage(req.user._id, 'embeddingRequests', 1).catch(() => {});
 
     return ApiResponse.success(res, { document }, 'URL source created successfully', 201);
   }

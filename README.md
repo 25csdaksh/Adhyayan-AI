@@ -4,7 +4,7 @@
 
 ---
 
-## 📌 Status: Phase 14 Completed (Advanced AI Research & Knowledge Synthesis)
+## 📌 Status: Phase 15 Completed (Production Productization & Launch Readiness)
 
 - **Phase 01:** Foundation, Monorepo, Express Backend, MongoDB, CORS, `/api/health` *(Verified)*
 - **Phase 02:** Light-First Academic UI/UX, Design System, Landing Page, Dashboard, 3-Panel Workspace, Chat UI, Source Management, Settings, Profile *(Verified)*
@@ -20,6 +20,7 @@
 - **Phase 12:** Production Hardening + Reliability + Observability (Rate Limiting, AI Quota Guard, NoSQL Sanitization, Graceful Shutdown, Stale Job Recovery, Health Probes) *(Verified)*
 - **Phase 13:** Personal Research Memory + Advanced Knowledge UX (User & Notebook Memory, Source Relationships, Deep-Link Citation Previews, Saved Insights, Bookmarks, Universal Search, Knowledge Overview, Activity Timeline, Personalized Study Recommendations) *(Verified)*
 - **Phase 14:** Advanced AI Research & Knowledge Synthesis (Intent Classification, Bounded Planning, Multi-Query Retrieval, Provenance Validation, Claim-Evidence Matrix, Contradiction Detection, Knowledge Gaps, Academic Reports, Markdown/Text Export) *(Verified)*
+- **Phase 15:** Production Productization & Launch Readiness (First-Time Onboarding Tour, Usage Quotas & Metrics Dashboard, Subscription-Ready Entitlements, Sanitized Self-Service Data Export, Cascading Account Purge, BCrypt Password Security, Production Deployment Docs) *(Verified)*
 
 
 
@@ -742,7 +743,22 @@ npm run install:all
 - `/register` — Account Registration (auto-login on creation)
 - `/dashboard` — Protected: Notebooks Dashboard
 - `/notebooks/:id` — Protected: 3-Panel Study & Research Workspace
-- `/settings` — Protected: Preferences, Appearance & AI Grounding Settings
+- `/settings` — Protected: User Profile, Security, Plan Quotas, Usage Metrics & Data Management
 - `/profile` — Protected: Real User Profile & Research Storage Quotas
 - `/health` — Protected/Diagnostic: Live Backend & MongoDB System Diagnostics
 - `*` — 404 Error Page
+
+---
+
+## 💎 Phase 15 Productization & Launch Architecture
+
+- **Guided User Onboarding (`OnboardingModal.jsx`):** 5-step tour educating new users on Notebooks, Document Ingestion, Grounded RAG Chat, AI Study Tools, and Deep Multi-Source Synthesis with persistent completion state.
+- **Usage Tracking & Feature Entitlements (`entitlementService.js`):** Subscription-ready Free/Pro/Enterprise limits, dynamic feature gates (`canUseFeature`), monthly usage aggregation, and aggregate token observability.
+- **Account Security & BCrypt Updates:** Verified minimum 8-character password complexity, Bcrypt cost factor 12 re-hashing, and session preservation.
+- **Self-Service Data Export (`/api/users/export-data`):** Sanitized JSON export containing notebooks, insights, bookmarks, research sessions, and memories without private tokens or password hashes.
+- **Cascading Data Purge (`/api/users/me`):** Deep deletion across all 16 database collections ensuring complete privacy and isolation.
+- **Production Documentation:**
+  - [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md)
+  - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+  - [`docs/USAGE_LIMITS.md`](docs/USAGE_LIMITS.md)
+  - [`docs/PRIVACY.md`](docs/PRIVACY.md)
