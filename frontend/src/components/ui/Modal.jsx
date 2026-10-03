@@ -37,29 +37,29 @@ export const Modal = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-hidden"
     >
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-[#17211D]/40 backdrop-blur-xs transition-opacity duration-200"
+        className="fixed inset-0 bg-[#17211D]/45 backdrop-blur-xs transition-opacity duration-200"
       />
 
-      {/* Modal Dialog */}
+      {/* Modal Dialog Box */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`relative w-full ${maxWidth} bg-white rounded-2xl border border-[#E2E7E3] shadow-xl overflow-hidden transition-all duration-200 animate-in fade-in zoom-in-95 my-8 ${className}`}
+        className={`relative w-full ${maxWidth} max-h-[92vh] flex flex-col bg-white rounded-2xl border border-[#E2E7E3] shadow-2xl overflow-hidden transition-all duration-200 animate-in fade-in zoom-in-95 my-auto ${className}`}
       >
         {/* Header */}
         {(title || description) && (
-          <div className="px-6 py-5 border-b border-[#EDF1EE] flex items-start justify-between gap-4">
-            <div>
-              {title && <h2 className="text-lg font-bold text-[#17211D]">{title}</h2>}
-              {description && <p className="text-xs sm:text-sm text-[#6B756F] mt-1">{description}</p>}
+          <div className="px-5 sm:px-6 py-4 border-b border-[#EDF1EE] flex items-center justify-between gap-4 shrink-0 bg-white/95 backdrop-blur-sm z-10">
+            <div className="min-w-0 flex-1">
+              {title && <h2 className="text-base sm:text-lg font-bold text-[#17211D] truncate">{title}</h2>}
+              {description && <p className="text-xs sm:text-sm text-[#6B756F] mt-0.5 truncate">{description}</p>}
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 -mr-1 text-[#6B756F] hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors cursor-pointer"
+              className="p-1.5 -mr-1 text-[#6B756F] hover:text-[#17211D] hover:bg-[#F2F5F3] rounded-lg transition-colors cursor-pointer shrink-0"
               aria-label="Close dialog"
             >
               <X className="w-5 h-5" />
@@ -67,14 +67,14 @@ export const Modal = ({
           </div>
         )}
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Scrollable Content Area */}
+        <div className="p-5 sm:p-6 overflow-y-auto flex-1">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 bg-[#FAFBF9] border-t border-[#EDF1EE] flex items-center justify-end gap-3">
+          <div className="px-5 sm:px-6 py-3.5 bg-[#FAFBF9] border-t border-[#EDF1EE] flex items-center justify-end gap-3 shrink-0">
             {footer}
           </div>
         )}

@@ -368,7 +368,7 @@ export const StudyToolsPanel = ({
         isOpen={isViewerModalOpen && !!activeViewerTool}
         onClose={() => setIsViewerModalOpen(false)}
         title={activeViewerTool?.title || 'Study Material'}
-        maxWidth="max-w-4xl"
+        maxWidth="max-w-5xl"
       >
         {activeViewerTool?.toolType === 'summary' && (
           <SummaryViewer

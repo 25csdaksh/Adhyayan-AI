@@ -15,6 +15,15 @@ function processCitations(rawAnswer = '', sourceMap = new Map()) {
     return { cleanAnswer: '', citations: [] };
   }
 
+  // Normalize bracketed tags with multiple comma-separated sources e.g. [SOURCE_3, SOURCE_4] -> [SOURCE_3] [SOURCE_4]
+  const normalizedRaw = rawAnswer.replace(
+    /\[\s*((?:SOURCE[_\s]?\d+|\d+)(?:\s*,\s*(?:SOURCE[_\s]?\d+|\d+))*)\s*\]/gi,
+    (match, inner) => {
+      const parts = inner.split(',').map((s) => s.trim().replace(/^SOURCE\s+/i, 'SOURCE_'));
+      return parts.map((p) => `[${p}]`).join(' ');
+    }
+  );
+
   const citations = [];
   const seenChunkIds = new Set();
   const sourceKeyToFinalNumber = new Map();
@@ -26,7 +35,7 @@ function processCitations(rawAnswer = '', sourceMap = new Map()) {
 
   // First pass: identify all valid citations in order of appearance
   let match;
-  while ((match = tagRegex.exec(rawAnswer)) !== null) {
+  while ((match = tagRegex.exec(normalizedRaw)) !== null) {
     const rawNum = match[1] || match[2];
     const sourceKey = `SOURCE_${rawNum}`;
     const sourceData = sourceMap.get(sourceKey) || sourceMap.get(rawNum);
@@ -62,7 +71,7 @@ function processCitations(rawAnswer = '', sourceMap = new Map()) {
 
   // Second pass: replace source tags with clean normalized numeric citations [1], [2]
   // and remove invalid/hallucinated citation tags cleanly
-  const cleanAnswer = rawAnswer.replace(tagRegex, (fullMatch, group1, group2) => {
+  const cleanAnswer = normalizedRaw.replace(tagRegex, (fullMatch, group1, group2) => {
     const num = group1 || group2;
     const sourceKey = `SOURCE_${num}`;
     const finalNumber = sourceKeyToFinalNumber.get(sourceKey) || sourceKeyToFinalNumber.get(num);
