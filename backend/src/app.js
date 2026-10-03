@@ -36,10 +36,16 @@ app.use(
       if (!origin) {
         return callback(null, true);
       }
-      const isAllowed = config.allowedOrigins.includes(origin);
-      const isDevLocal = !config.isProduction && (devOrigins.includes(origin) || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin));
+      let isVercel = false;
+      try {
+        const url = new URL(origin);
+        isVercel = url.hostname.endsWith('.vercel.app') || url.hostname.endsWith('.onrender.com');
+      } catch {}
 
-      if (isAllowed || isDevLocal) {
+      const isAllowed = config.allowedOrigins.includes(origin) || config.allowedOrigins.includes('*');
+      const isDevLocal = devOrigins.includes(origin) || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+
+      if (isAllowed || isVercel || isDevLocal) {
         return callback(null, true);
       }
       return callback(new Error(`CORS policy blocked access from origin: ${origin}`));
