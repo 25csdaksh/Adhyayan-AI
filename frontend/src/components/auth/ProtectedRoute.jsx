@@ -14,7 +14,7 @@ export const ProtectedRoute = () => {
         <div className="w-12 h-12 rounded-2xl bg-[#1F5E4B] text-white flex items-center justify-center shadow-md animate-pulse">
           <BookOpen className="w-6 h-6" />
         </div>
-        <Loader size="md" text="Verifying StudyLM secure session..." />
+        <Loader size="md" text="Verifying Adhyayan-AI secure session..." />
       </div>
     );
   }

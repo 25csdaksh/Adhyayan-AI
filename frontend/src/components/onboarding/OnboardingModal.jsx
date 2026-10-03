@@ -21,12 +21,12 @@ export const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
 
   const steps = [
     {
-      title: 'Welcome to StudyLM',
+      title: 'Welcome to Adhyayan-AI',
       subtitle: 'Your personal AI research and study companion',
       icon: Sparkles,
       iconBg: 'bg-[#E8F2EE] text-[#1F5E4B]',
       content:
-        'StudyLM allows you to build personalized academic notebooks, ingest rich documents, and ask complex questions grounded directly in your sources with verifiable citations.',
+        'Adhyayan-AI allows you to build personalized academic notebooks, ingest rich documents, and ask complex questions grounded directly in your sources with verifiable citations.',
       highlight: 'Every AI answer is strictly grounded in the documents you provide.',
     },
     {
@@ -35,7 +35,7 @@ export const OnboardingModal = ({ isOpen, onClose, onComplete }) => {
       icon: FileText,
       iconBg: 'bg-blue-50 text-blue-700',
       content:
-        'Upload lecture slides (PDFs), notes (DOCX/TXT), web URLs, or custom text. StudyLM cleans, extracts, and vector-indexes your materials with Google Gemini embeddings.',
+        'Upload lecture slides (PDFs), notes (DOCX/TXT), web URLs, or custom text. Adhyayan-AI cleans, extracts, and vector-indexes your materials with Google Gemini embeddings.',
       highlight: 'Supports multi-format ingestion with hop-by-hop SSRF security protection.',
     },
     {

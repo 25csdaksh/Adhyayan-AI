@@ -12,7 +12,7 @@ export const NotFoundPage = () => {
       <h1 className="text-4xl font-extrabold text-[#17211D] tracking-tight">404</h1>
       <h2 className="text-lg sm:text-xl font-bold text-[#17211D] mt-2">Study Resource Not Found</h2>
       <p className="text-xs sm:text-sm text-[#6B756F] mt-2 max-w-md leading-relaxed">
-        The requested notebook or page does not exist or has been relocated within the StudyLM workspace.
+        The requested notebook or page does not exist or has been relocated within the Adhyayan-AI workspace.
       </p>
 
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">

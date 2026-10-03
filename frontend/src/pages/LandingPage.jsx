@@ -29,7 +29,7 @@ export const LandingPage = () => {
   const capabilities = [
     {
       title: 'Grounded in Your Own Material',
-      description: 'Upload textbooks, lecture PDFs, docx notes, or documentation links. StudyLM answers exclusively using your uploaded sources, eliminating hallucinations.',
+      description: 'Upload textbooks, lecture PDFs, docx notes, or documentation links. Adhyayan-AI answers exclusively using your uploaded sources, eliminating hallucinations.',
       icon: ShieldCheck,
       badge: 'Zero Hallucinations',
     },
@@ -63,7 +63,7 @@ export const LandingPage = () => {
     {
       step: '02',
       title: 'Intelligent Source Indexing',
-      description: 'StudyLM chunks, structures, and embeds your documents into high-dimensional vector search indices.',
+      description: 'Adhyayan-AI chunks, structures, and embeds your documents into high-dimensional vector search indices.',
       icon: Database,
     },
     {
@@ -186,7 +186,7 @@ export const LandingPage = () => {
                   </div>
                   <div className="p-3 rounded-xl bg-[#E8F2EE]/60 border border-[#D8E9E2] text-[#17211D] space-y-1.5">
                     <div className="flex items-center gap-1.5 text-[#1F5E4B] font-bold text-[11px]">
-                      <Sparkles className="w-3.5 h-3.5" /> StudyLM Grounded Response
+                      <Sparkles className="w-3.5 h-3.5" /> Adhyayan-AI Grounded Response
                     </div>
                     <p className="leading-relaxed">
                       TCP Fast Retransmit is triggered upon receiving <strong>3 duplicate ACKs</strong> (4 identical ACKs total). The sender retransmits without waiting for the RTO timer to expire.
@@ -234,7 +234,7 @@ export const LandingPage = () => {
           <div className="text-center max-w-3xl mx-auto mb-14">
             <Badge variant="accent" size="md">Workflow</Badge>
             <h2 className="text-2xl sm:text-3xl font-bold text-[#17211D] mt-3">
-              How StudyLM accelerates your learning
+              How Adhyayan-AI accelerates your learning
             </h2>
             <p className="text-sm sm:text-base text-[#6B756F] mt-2">
               From raw course documents to deep understanding in four simple steps.
@@ -274,7 +274,7 @@ export const LandingPage = () => {
               Grounded AI built for academic rigor
             </h2>
             <p className="text-sm sm:text-base text-[#6B756F] mt-2">
-              Unlike generic chatbots that guess, StudyLM relies strictly on your materials.
+              Unlike generic chatbots that guess, Adhyayan-AI relies strictly on your materials.
             </p>
           </div>
 
@@ -308,7 +308,7 @@ export const LandingPage = () => {
             Comprehensive study artifacts generated in one click
           </h2>
           <p className="text-sm sm:text-base text-[#6B756F] mt-2 max-w-xl mx-auto">
-            Stop manually making flashcards and study guides. Let StudyLM synthesize your notes automatically.
+            Stop manually making flashcards and study guides. Let Adhyayan-AI synthesize your notes automatically.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-12 text-left">

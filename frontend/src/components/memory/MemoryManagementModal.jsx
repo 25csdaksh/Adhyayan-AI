@@ -166,7 +166,7 @@ export const MemoryManagementModal = ({ isOpen, onClose, notebookId }) => {
         {activeTab === 'user' && (
           <div className="space-y-4 overflow-y-auto pr-1">
             <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-[11px] text-[#4A5550] leading-relaxed font-serif">
-              💡 <strong>Explicit Memory Only</strong>: StudyLM only saves preferences and learning goals you explicitly define. Source documents always remain the factual authority in RAG responses.
+              💡 <strong>Explicit Memory Only</strong>: Adhyayan-AI only saves preferences and learning goals you explicitly define. Source documents always remain the factual authority in RAG responses.
             </div>
 
             {/* Add Memory Form */}

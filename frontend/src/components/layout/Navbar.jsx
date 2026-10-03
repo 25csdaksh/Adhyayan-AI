@@ -23,7 +23,7 @@ export const Navbar = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-white tracking-tight">StudyLM</span>
+                <span className="font-bold text-lg text-white tracking-tight">Adhyayan-AI</span>
                 <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full flex items-center gap-1">
                   <Sparkles className="w-2.5 h-2.5" /> v0.1
                 </span>

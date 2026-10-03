@@ -170,7 +170,7 @@ export const UniversalSearchModal = ({ isOpen, onClose, notebookId, onSelectResu
                       <div className="flex items-center gap-2">
                         <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
                         <span className="text-xs font-bold text-[#17211D]">
-                          {c.role === 'user' ? 'User Question' : 'StudyLM Response'}
+                          {c.role === 'user' ? 'User Question' : 'Adhyayan-AI Response'}
                         </span>
                       </div>
                       <p className="text-[11px] text-[#6B756F] line-clamp-2 font-serif">{c.content}</p>

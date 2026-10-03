@@ -63,7 +63,7 @@ export const HomePage = () => {
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 max-w-3xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-4">
-            <Sparkles className="w-3.5 h-3.5" /> StudyLM Architectural Foundation
+            <Sparkles className="w-3.5 h-3.5" /> Adhyayan-AI Architectural Foundation
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
             Mini NotebookLM-style AI Study & Research Platform

@@ -60,7 +60,7 @@ export const LoginPage = () => {
           <div className="w-10 h-10 rounded-2xl bg-[#1F5E4B] text-white flex items-center justify-center shadow-md shadow-[#1F5E4B]/20 group-hover:scale-105 transition-transform">
             <BookOpen className="w-5 h-5" />
           </div>
-          <span className="font-bold text-2xl text-[#17211D] tracking-tight font-sans">StudyLM</span>
+          <span className="font-bold text-2xl text-[#17211D] tracking-tight font-sans">Adhyayan-AI</span>
         </Link>
 
         <h1 className="text-2xl sm:text-3xl font-bold text-[#17211D] tracking-tight">
@@ -155,7 +155,7 @@ export const LoginPage = () => {
               className="w-full shadow-sm mt-2"
               rightIcon={ArrowRight}
             >
-              Sign In to StudyLM
+              Sign In to Adhyayan-AI
             </Button>
           </form>
 

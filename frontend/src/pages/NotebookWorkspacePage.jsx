@@ -872,7 +872,7 @@ export const NotebookWorkspacePage = () => {
                 </div>
                 <div className="space-y-2 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[#17211D]">StudyLM AI</span>
+                    <span className="text-xs font-bold text-[#17211D]">Adhyayan-AI</span>
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#E8F2EE] text-[#1F5E4B] flex items-center gap-1">
                       <Loader2 className="w-2.5 h-2.5 animate-spin" /> Grounding in sources & memory...
                     </span>

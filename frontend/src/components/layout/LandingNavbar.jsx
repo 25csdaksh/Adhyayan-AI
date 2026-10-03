@@ -29,7 +29,7 @@ export const LandingNavbar = () => {
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-lg text-[#17211D] tracking-tight font-sans">StudyLM</span>
+                <span className="font-bold text-lg text-[#17211D] tracking-tight font-sans">Adhyayan-AI</span>
                 <span className="text-[10px] font-semibold bg-[#E8F2EE] text-[#1F5E4B] px-2 py-0.2 rounded-full border border-[#D8E9E2]">
                   v0.3
                 </span>

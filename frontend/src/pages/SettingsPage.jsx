@@ -176,7 +176,7 @@ export const SettingsPage = () => {
           key: checkoutData.keyId,
           amount: checkoutData.amountInPaise,
           currency: checkoutData.currency,
-          name: 'StudyLM',
+          name: 'Adhyayan-AI',
           description: `Subscription: ${checkoutData.planName}`,
           order_id: checkoutData.orderId,
           prefill: checkoutData.prefill,
@@ -248,7 +248,7 @@ export const SettingsPage = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `studylm-research-export-${new Date().toISOString().split('T')[0]}.json`;
+      link.download = `adhyayan-ai-research-export-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

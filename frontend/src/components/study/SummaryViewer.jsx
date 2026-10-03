@@ -155,7 +155,7 @@ export const SummaryViewer = ({ studyTool, onSelectCitation }) => {
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#1F5E4B]/10 text-[#1F5E4B] border border-[#1F5E4B]/20">
                 <Sparkles className="w-3.5 h-3.5" />
-                StudyLM Executive Dossier
+                Adhyayan-AI Executive Dossier
               </span>
               <Badge variant={mode === 'short' ? 'neutral' : 'forest'} size="sm">
                 {mode === 'short' ? 'Concise Summary' : 'Detailed Analysis'}

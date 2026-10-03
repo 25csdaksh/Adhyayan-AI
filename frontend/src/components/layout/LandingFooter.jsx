@@ -13,7 +13,7 @@ export const LandingFooter = () => {
               <div className="w-8 h-8 rounded-xl bg-[#1F5E4B] text-white flex items-center justify-center">
                 <BookOpen className="w-4 h-4" />
               </div>
-              <span className="font-bold text-lg text-[#17211D]">StudyLM</span>
+              <span className="font-bold text-lg text-[#17211D]">Adhyayan-AI</span>
             </div>
             <p className="text-xs sm:text-sm text-[#6B756F] leading-relaxed">
               A modern, NotebookLM-style AI study and research platform grounded strictly in your personal textbooks, lecture slides, research papers, and web sources.
@@ -48,7 +48,7 @@ export const LandingFooter = () => {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-[#EDF1EE] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8E9993]">
-          <p>© {new Date().getFullYear()} StudyLM. Designed with academic rigor.</p>
+          <p>© {new Date().getFullYear()} Adhyayan-AI. Designed with academic rigor.</p>
           <div className="flex items-center gap-6">
             <span>React 19 • Vite • Tailwind CSS v4</span>
             <Link to="/health" className="text-[#1F5E4B] font-medium hover:underline">

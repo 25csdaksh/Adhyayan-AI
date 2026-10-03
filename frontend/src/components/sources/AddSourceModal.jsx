@@ -198,7 +198,7 @@ export const AddSourceModal = ({
       isOpen={isOpen}
       onClose={handleClose}
       title="Add Source to Notebook"
-      description="StudyLM grounds all AI responses strictly in your selected study sources."
+      description="Adhyayan-AI grounds all AI responses strictly in your selected study sources."
       maxWidth="max-w-xl"
     >
       <div className="space-y-5">
@@ -359,7 +359,7 @@ export const AddSourceModal = ({
               value={webUrl}
               onChange={(e) => setWebUrl(e.target.value)}
               leftIcon={LinkIcon}
-              hint="StudyLM will register this URL as a study source for grounding."
+              hint="Adhyayan-AI will register this URL as a study source for grounding."
               disabled={isSubmitting}
               autoFocus
             />

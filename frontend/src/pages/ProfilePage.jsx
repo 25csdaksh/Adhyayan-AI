@@ -34,7 +34,7 @@ export const ProfilePage = () => {
   const storagePercent = Math.round((stats.storageUsedMB / stats.storageLimitMB) * 100);
 
   const displayName = user?.name || 'Researcher';
-  const displayEmail = user?.email || 'researcher@studylm.edu';
+  const displayEmail = user?.email || 'researcher@adhyayan.ai';
   const displayRole = user?.role === 'admin' ? 'Administrator' : 'Student & Researcher';
   const formattedJoinDate = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
@@ -198,7 +198,7 @@ export const ProfilePage = () => {
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
         title="Edit Researcher Profile"
-        description="Update your display name across your StudyLM notebooks."
+        description="Update your display name across your Adhyayan-AI notebooks."
         footer={
           <>
             <Button variant="outline" onClick={() => setEditModalOpen(false)}>

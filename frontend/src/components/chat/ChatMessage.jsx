@@ -156,7 +156,7 @@ export const ChatMessage = ({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-[#17211D]">
-              {isAI ? 'StudyLM AI' : 'You'}
+              {isAI ? 'Adhyayan-AI' : 'You'}
             </span>
             {isAI && (
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#E8F2EE] text-[#1F5E4B] border border-[#D8E9E2]">

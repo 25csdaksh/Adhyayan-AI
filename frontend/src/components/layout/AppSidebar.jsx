@@ -64,7 +64,7 @@ export const AppSidebar = ({
               <BookOpen className="w-4 h-4" />
             </div>
             <div>
-              <span className="font-bold text-base text-[#17211D] tracking-tight">StudyLM</span>
+              <span className="font-bold text-base text-[#17211D] tracking-tight">Adhyayan-AI</span>
               <span className="text-[10px] block text-[#6B756F] font-medium -mt-0.5">Research Studio</span>
             </div>
           </Link>

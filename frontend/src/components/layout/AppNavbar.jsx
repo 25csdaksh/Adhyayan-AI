@@ -63,7 +63,7 @@ export const AppNavbar = ({
             <div className="w-8 h-8 rounded-xl bg-[#1F5E4B] text-white flex items-center justify-center shadow-2xs">
               <BookOpen className="w-4 h-4" />
             </div>
-            <span className="font-bold text-base text-[#17211D] tracking-tight">StudyLM</span>
+            <span className="font-bold text-base text-[#17211D] tracking-tight">Adhyayan-AI</span>
           </Link>
         </div>
 
