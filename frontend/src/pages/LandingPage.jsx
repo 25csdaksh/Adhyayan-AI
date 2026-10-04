@@ -230,8 +230,17 @@ export const LandingPage = () => {
 
       {/* 3. Hero Section: "Learn Smarter. Grow Further." */}
       <section id="hero" className="relative overflow-hidden pt-12 pb-20 sm:pt-20 sm:pb-28 border-b border-slate-200/80 bg-gradient-to-b from-white via-[#F8FAFC] to-[#F1F5F9]">
+        {/* User Specified Hero Background with 40% Visibility */}
+        <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden select-none z-0">
+          <img
+            src="/hero-bg-exact.png"
+            alt="Adhyayan LM Background"
+            className="w-full h-full object-cover object-center opacity-40 filter contrast-105"
+          />
+        </div>
+
         {/* Ambient Mesh Glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-gradient-to-tr from-emerald-500/15 via-teal-500/10 to-amber-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-gradient-to-tr from-emerald-500/10 via-teal-500/10 to-amber-500/10 rounded-full blur-3xl pointer-events-none z-0" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10 space-y-6">
           {/* Badge */}
